@@ -8,10 +8,9 @@ import {
   ArrowDownRight, 
   Coins, 
   FileCheck, 
-  FolderLock,
-  Plus,
-  Minus,
-  ClipboardList
+  FolderLock, 
+  Plus, 
+  Minus
 } from 'lucide-react';
 
 interface Movement {
@@ -72,6 +71,49 @@ export default function CashRegister() {
     },
     enabled: !!activeRegister
   });
+
+  // Estado de pestaña (Flujo de Caja vs Ventas del Turno vs Productos Vendidos)
+  const [activeTab, setActiveTab] = useState<'flujo' | 'ventas' | 'productos'>('flujo');
+
+  // 3. Consultar Ventas del turno activo (acumulado y desglose)
+  const { data: shiftSales = [] } = useQuery<any[]>({
+    queryKey: ['shiftSales', activeRegister?.id],
+    queryFn: async () => {
+      if (!activeRegister) return [];
+      const res = await fetch(`http://localhost:3001/api/cash/${activeRegister.id}/sales`);
+      return res.json();
+    },
+    enabled: !!activeRegister
+  });
+
+  // 4. Agrupamiento acumulado de productos y servicios vendidos en el turno
+  const productsSold = React.useMemo(() => {
+    const groups: { [key: string]: { nombre: string; cantidad: number; total: number; esServicio: boolean } } = {};
+    
+    shiftSales.forEach((sale: any) => {
+      if (sale.items) {
+        sale.items.forEach((item: any) => {
+          const key = item.nombre;
+          const qty = item.cantidad || 0;
+          const sub = parseFloat(item.subtotal?.toString() || '0');
+          const esServ = !!item.serviceId;
+          
+          if (!groups[key]) {
+            groups[key] = {
+              nombre: item.nombre,
+              cantidad: 0,
+              total: 0,
+              esServicio: esServ
+            };
+          }
+          groups[key].cantidad += qty;
+          groups[key].total += sub;
+        });
+      }
+    });
+    
+    return Object.values(groups).sort((a, b) => b.cantidad - a.cantidad);
+  }, [shiftSales]);
 
   // Mutación: Abrir Caja
   const openCajaMutation = useMutation({
@@ -135,7 +177,7 @@ export default function CashRegister() {
       return res.json();
     },
     onSuccess: (data) => {
-      alert(`Turno de caja cerrado con éxito.\nCorte generado con diferencia de: $${data.register.diferencia.toFixed(2)}.\nRespaldo de base de datos generado automáticamente en: Documentos/PuntoEscolar/Backups`);
+      alert(`Turno de caja cerrado con éxito.\nCorte generado con diferencia de: $${parseFloat(data.register.diferencia || '0').toFixed(2)}.\nRespaldo de base de datos generado automáticamente en: Documentos/PuntoEscolar/Backups`);
       clearRegister();
       setShowCloseModal(false);
       setCashCounted('');
@@ -319,31 +361,190 @@ export default function CashRegister() {
               </div>
             </div>
 
-            {/* Listado de Flujo (Ingresos / Egresos) */}
+            {/* Listado de Flujo / Ventas (Pestañas) */}
             <div className="border rounded-2xl bg-card p-5 flex flex-col flex-1 overflow-hidden shadow-sm">
-              <h3 className="font-bold text-base mb-3 flex items-center gap-1.5 shrink-0 font-outfit">
-                <ClipboardList className="text-purple-500" size={18} />
-                Historial de Flujo del Turno
-              </h3>
-              
-              <div className="overflow-y-auto flex-1 border rounded-xl bg-muted/10 divide-y">
-                {movements.length === 0 ? (
-                  <p className="text-xs text-muted-foreground p-8 text-center">No se han registrado depósitos ni retiros manuales en este turno.</p>
-                ) : (
-                  movements.map(mov => (
-                    <div key={mov.id} className="p-3 flex justify-between items-center text-xs">
-                      <div>
-                        <span className="font-semibold block text-slate-800 dark:text-slate-200">{mov.descripcion}</span>
-                        <span className="text-[10px] text-muted-foreground mt-0.5 block">{new Date(mov.fecha).toLocaleTimeString()}</span>
-                      </div>
-                      <span className={`inline-flex items-center gap-0.5 font-bold px-2 py-0.5 rounded-full ${mov.tipo === 'INGRESO' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-500'}`}>
-                        {mov.tipo === 'INGRESO' ? <Plus size={10} /> : <Minus size={10} />}
-                        ${parseFloat(mov.monto).toFixed(2)}
-                      </span>
-                    </div>
-                  ))
+              <div className="flex justify-between items-center border-b pb-3 mb-3 shrink-0">
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setActiveTab('flujo')}
+                    className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                      activeTab === 'flujo'
+                        ? 'bg-blue-600 text-white shadow-md shadow-blue-600/10'
+                        : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                    }`}
+                  >
+                    Historial de Flujo
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('ventas')}
+                    className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                      activeTab === 'ventas'
+                        ? 'bg-blue-600 text-white shadow-md shadow-blue-600/10'
+                        : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                    }`}
+                  >
+                    Ventas del Turno
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('productos')}
+                    className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                      activeTab === 'productos'
+                        ? 'bg-blue-600 text-white shadow-md shadow-blue-600/10'
+                        : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                    }`}
+                  >
+                    Productos Vendidos
+                  </button>
+                </div>
+                
+                {activeTab === 'ventas' && (
+                  <div className="text-[10px] bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold px-2 py-0.5 rounded-full">
+                    Total Ventas: {shiftSales.length}
+                  </div>
+                )}
+
+                {activeTab === 'productos' && (
+                  <div className="text-[10px] bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold px-2 py-0.5 rounded-full">
+                    Artículos Distintos: {productsSold.length}
+                  </div>
                 )}
               </div>
+              
+              {activeTab === 'flujo' && (
+                <div className="overflow-y-auto flex-1 border rounded-xl bg-muted/10 divide-y">
+                  {movements.length === 0 ? (
+                    <p className="text-xs text-muted-foreground p-8 text-center">No se han registrado depósitos ni retiros manuales en este turno.</p>
+                  ) : (
+                    movements.map(mov => (
+                      <div key={mov.id} className="p-3 flex justify-between items-center text-xs">
+                        <div>
+                          <span className="font-semibold block text-slate-800 dark:text-slate-200">{mov.descripcion}</span>
+                          <span className="text-[10px] text-muted-foreground mt-0.5 block">{new Date(mov.fecha).toLocaleTimeString()}</span>
+                        </div>
+                        <span className={`inline-flex items-center gap-0.5 font-bold px-2 py-0.5 rounded-full ${mov.tipo === 'INGRESO' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-500'}`}>
+                          {mov.tipo === 'INGRESO' ? <Plus size={10} /> : <Minus size={10} />}
+                          ${parseFloat(mov.monto).toFixed(2)}
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+
+              {activeTab === 'ventas' && (
+                <div className="flex-1 flex flex-col overflow-hidden space-y-3">
+                  {/* Desglose / Acumulado por Tipo de Pago */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 bg-muted/20 border p-2.5 rounded-xl text-center shrink-0">
+                    <div className="p-1">
+                      <span className="text-[9px] text-muted-foreground font-bold uppercase block">Efectivo</span>
+                      <span className="text-xs font-extrabold text-emerald-600 font-mono">
+                        ${shiftSales
+                          .filter(s => s.formaPago === 'EFECTIVO' || s.formaPago === 'MIXTO')
+                          .reduce((acc, s) => acc + (s.formaPago === 'MIXTO' ? parseFloat(s.montoEfectivo.toString()) : parseFloat(s.total.toString())), 0)
+                          .toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="p-1 border-l">
+                      <span className="text-[9px] text-muted-foreground font-bold uppercase block">Tarjeta</span>
+                      <span className="text-xs font-extrabold text-purple-600 font-mono">
+                        ${shiftSales
+                          .filter(s => s.formaPago === 'TARJETA' || s.formaPago === 'MIXTO')
+                          .reduce((acc, s) => acc + (s.formaPago === 'MIXTO' ? parseFloat(s.montoTarjeta.toString()) : parseFloat(s.total.toString())), 0)
+                          .toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="p-1 border-l">
+                      <span className="text-[9px] text-muted-foreground font-bold uppercase block">Transf.</span>
+                      <span className="text-xs font-extrabold text-blue-600 font-mono">
+                        ${shiftSales
+                          .filter(s => s.formaPago === 'TRANSFERENCIA' || s.formaPago === 'MIXTO')
+                          .reduce((acc, s) => acc + (s.formaPago === 'MIXTO' ? parseFloat(s.montoTransf.toString()) : parseFloat(s.total.toString())), 0)
+                          .toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="p-1 border-l bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 rounded-lg">
+                      <span className="text-[9px] opacity-70 font-bold uppercase block">Acumulado</span>
+                      <span className="text-xs font-black font-mono">
+                        ${shiftSales.reduce((acc, s) => acc + parseFloat(s.total.toString()), 0).toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Listado de Ventas */}
+                  <div className="overflow-y-auto flex-1 border rounded-xl bg-muted/10 divide-y">
+                    {shiftSales.length === 0 ? (
+                      <p className="text-xs text-muted-foreground p-8 text-center">No se han realizado ventas en este turno.</p>
+                    ) : (
+                      shiftSales.map((sale: any) => (
+                        <div key={sale.id} className="p-3 flex justify-between items-center text-xs">
+                          <div>
+                            <span className="font-bold text-slate-800 dark:text-slate-200 block">{sale.folio}</span>
+                            <span className="text-[10px] text-muted-foreground font-semibold">
+                              Cliente: {sale.customer?.nombre || 'Público General'} | Pago: {sale.formaPago}
+                            </span>
+                            <span className="text-[9px] text-slate-400 block mt-0.5">
+                              {new Date(sale.fecha).toLocaleTimeString()}
+                            </span>
+                          </div>
+                          <span className="text-sm font-extrabold text-blue-600 dark:text-blue-400 font-mono">
+                            ${parseFloat(sale.total.toString()).toFixed(2)}
+                          </span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'productos' && (
+                <div className="flex-1 flex flex-col overflow-hidden space-y-3">
+                  {/* Tarjeta de Resumen Acumulado de Artículos */}
+                  <div className="grid grid-cols-2 gap-3 bg-muted/20 border p-3 rounded-xl text-center shrink-0">
+                    <div>
+                      <span className="text-[9px] text-muted-foreground font-bold uppercase block">Total Artículos Vendidos</span>
+                      <span className="text-sm font-extrabold text-blue-600 dark:text-blue-400 font-mono">
+                        {productsSold.reduce((acc, p) => acc + p.cantidad, 0)} unidades
+                      </span>
+                    </div>
+                    <div className="border-l">
+                      <span className="text-[9px] text-muted-foreground font-bold uppercase block">Total Recaudado</span>
+                      <span className="text-sm font-black text-emerald-600 font-mono">
+                        ${productsSold.reduce((acc, p) => acc + p.total, 0).toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Listado / Tabla de Artículos Vendidos */}
+                  <div className="overflow-y-auto flex-1 border rounded-xl bg-muted/10 divide-y">
+                    {productsSold.length === 0 ? (
+                      <p className="text-xs text-muted-foreground p-8 text-center">No se han vendido productos o servicios en este turno.</p>
+                    ) : (
+                      productsSold.map((p, idx) => (
+                        <div key={idx} className="p-3 flex justify-between items-center text-xs hover:bg-muted/5 transition-all">
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-slate-800 dark:text-slate-200">{p.nombre}</span>
+                              <span className={`text-[8px] font-bold px-1.5 py-0.2 rounded-full uppercase ${
+                                p.esServicio
+                                  ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
+                                  : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                              }`}>
+                                {p.esServicio ? 'Servicio' : 'Producto'}
+                              </span>
+                            </div>
+                            <span className="text-[10px] text-muted-foreground">
+                              Cantidad vendida: <strong className="font-mono text-slate-700 dark:text-slate-300">{p.cantidad}</strong>
+                            </span>
+                          </div>
+                          <span className="text-sm font-extrabold text-slate-900 dark:text-slate-100 font-mono">
+                            ${p.total.toFixed(2)}
+                          </span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
           </div>

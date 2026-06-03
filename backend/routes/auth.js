@@ -141,4 +141,80 @@ router.put('/users/:id', async (req, res) => {
   }
 });
 
+// 4. Obtener todos los permisos del sistema
+router.get('/permissions', async (req, res) => {
+  try {
+    const permissions = await prisma.permission.findMany();
+    return res.json(permissions);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+// 5. Obtener todos los roles con sus permisos
+router.get('/roles', async (req, res) => {
+  try {
+    const roles = await prisma.role.findMany({
+      include: {
+        permissions: true
+      }
+    });
+    return res.json(roles);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+// 6. Crear un nuevo rol con permisos
+router.post('/roles', async (req, res) => {
+  const { name, description, permissionIds } = req.body;
+  if (!name) {
+    return res.status(400).json({ error: 'El nombre del rol es obligatorio' });
+  }
+  try {
+    const newRole = await prisma.role.create({
+      data: {
+        name,
+        description,
+        permissions: {
+          connect: (permissionIds || []).map(id => ({ id: parseInt(id) }))
+        }
+      },
+      include: {
+        permissions: true
+      }
+    });
+    return res.json(newRole);
+  } catch (error) {
+    return res.status(400).json({ error: 'El rol ya existe o los datos son inválidos' });
+  }
+});
+
+// 7. Editar un rol existente y actualizar sus permisos
+router.put('/roles/:id', async (req, res) => {
+  const { id } = req.params;
+  const { name, description, permissionIds } = req.body;
+  if (!name) {
+    return res.status(400).json({ error: 'El nombre del rol es obligatorio' });
+  }
+  try {
+    const updatedRole = await prisma.role.update({
+      where: { id: parseInt(id) },
+      data: {
+        name,
+        description,
+        permissions: {
+          set: (permissionIds || []).map(id => ({ id: parseInt(id) }))
+        }
+      },
+      include: {
+        permissions: true
+      }
+    });
+    return res.json(updatedRole);
+  } catch (error) {
+    return res.status(400).json({ error: 'Error al actualizar el rol o asignar permisos' });
+  }
+});
+
 module.exports = router;

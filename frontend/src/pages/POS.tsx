@@ -349,6 +349,8 @@ export default function POS() {
       setCheckoutSuccess(true);
       queryClient.invalidateQueries({ queryKey: ['products-pos'] });
       queryClient.invalidateQueries({ queryKey: ['dashboardMetrics'] });
+      queryClient.invalidateQueries({ queryKey: ['cashRegisterStatus'] });
+      queryClient.invalidateQueries({ queryKey: ['shiftSales'] });
       
       // --- IMPRESIÓN SILENCIOSA DEL TICKET EN ELECTRON ---
       if ((window as any).electronAPI) {

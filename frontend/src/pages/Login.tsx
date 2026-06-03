@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useSessionStore } from '../store/sessionStore';
-import { LogIn, KeyRound, Store, HelpCircle } from 'lucide-react';
+import { LogIn, KeyRound, HelpCircle } from 'lucide-react';
 
 export default function Login() {
   const [username, setUsername] = useState('');
@@ -83,8 +83,8 @@ export default function Login() {
 
       <div className="w-full max-w-md p-8 rounded-2xl border border-white/10 bg-slate-900/60 backdrop-blur-xl shadow-2xl relative">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center p-3 bg-blue-500/10 text-blue-400 rounded-xl mb-3 border border-blue-500/20">
-            <Store size={36} className="animate-pulse" />
+          <div className="inline-flex items-center justify-center p-1 bg-white rounded-2xl mb-3 border border-white/10 w-20 h-20 overflow-hidden shadow-md">
+            <img src="./logo.png" alt="Punto Escolar Logo" className="w-full h-full object-contain rounded-xl" />
           </div>
           <h1 className="text-3xl font-extrabold text-white font-outfit tracking-tight">Punto Escolar</h1>
           <p className="text-slate-400 text-sm mt-1">v1.0 MVP - Sistema de Escritorio Local</p>
@@ -105,6 +105,7 @@ export default function Login() {
               placeholder="Ingresa tu usuario"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
+              autoFocus
             />
           </div>
 

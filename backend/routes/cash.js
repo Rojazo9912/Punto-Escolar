@@ -186,4 +186,37 @@ router.get('/history/all', async (req, res) => {
   }
 });
 
+// Obtener todas las ventas asociadas a un corte de caja/registro (durante su periodo de apertura)
+router.get('/:registerId/sales', async (req, res) => {
+  const { registerId } = req.params;
+  try {
+    const register = await prisma.cashRegister.findUnique({
+      where: { id: parseInt(registerId) }
+    });
+    if (!register) {
+      return res.status(404).json({ error: 'Caja no encontrada' });
+    }
+
+    const sales = await prisma.sale.findMany({
+      where: {
+        userId: register.userId,
+        fecha: {
+          gte: register.fechaApertura,
+          lte: register.fechaCierre || new Date()
+        }
+      },
+      orderBy: { fecha: 'desc' },
+      include: {
+        customer: { select: { nombre: true } },
+        items: true
+      }
+    });
+
+    return res.json(sales);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: 'Error al obtener las ventas del turno' });
+  }
+});
+
 module.exports = router;

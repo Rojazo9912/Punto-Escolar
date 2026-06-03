@@ -22,6 +22,7 @@ function createWindow() {
     minWidth: 1000,
     minHeight: 700,
     title: "Punto Escolar v1.0 - MVP Comercial",
+    icon: path.join(__dirname, 'icon.ico'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -29,9 +30,6 @@ function createWindow() {
     },
     show: false, // Evita parpadeo blanco inicial
   });
-
-  // Maximizar por defecto para mejorar usabilidad táctil y de escritorio
-  mainWindow.maximize();
 
   if (isDev) {
     // Apuntar al puerto por defecto de Vite
@@ -43,7 +41,9 @@ function createWindow() {
   }
 
   mainWindow.once('ready-to-show', () => {
+    mainWindow.maximize();
     mainWindow.show();
+    mainWindow.focus();
   });
 
   mainWindow.on('closed', () => {
@@ -111,4 +111,12 @@ ipcMain.handle('print-ticket-silent', async (event, htmlContent) => {
 // 3. Obtener el path de backups nativo
 ipcMain.handle('get-backup-dir', () => {
   return path.join(app.getPath('userData'), 'Backups');
+});
+
+// 4. Corrección de foco de teclado (evita bloqueo de inputs tras alerts/diálogos)
+ipcMain.on('focus-fix', () => {
+  if (mainWindow) {
+    mainWindow.blur();
+    mainWindow.focus();
+  }
 });

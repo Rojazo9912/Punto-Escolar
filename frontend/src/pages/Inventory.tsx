@@ -262,6 +262,10 @@ export default function Inventory() {
 
   // Importador de Excel nativo local
   const handleExcelImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!hasPermission('crear_editar_productos')) {
+      alert('No tienes permisos para importar productos.');
+      return;
+    }
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -317,7 +321,13 @@ export default function Inventory() {
         <div className="flex items-center gap-3">
           {/* Botón Categorías */}
           <button
-            onClick={() => setShowCategoryModal(true)}
+            onClick={() => {
+              if (!hasPermission('crear_editar_productos')) {
+                alert('No tienes permisos para gestionar categorías.');
+                return;
+              }
+              setShowCategoryModal(true);
+            }}
             className="flex items-center gap-2 px-4 py-2 border rounded-xl hover:bg-accent text-sm font-semibold transition-all"
           >
             <FolderPlus size={16} />
@@ -421,7 +431,9 @@ export default function Inventory() {
                       <td className="px-6 py-3.5">{p.category?.name}</td>
                       <td className="px-6 py-3.5 text-muted-foreground">{p.marca || '-'}</td>
                       <td className="px-6 py-3.5">
-                        <div className="text-xs text-muted-foreground">C: ${parseFloat(p.precioCompra).toFixed(2)}</div>
+                        {hasPermission('ver_utilidades') && (
+                          <div className="text-xs text-muted-foreground">C: ${parseFloat(p.precioCompra).toFixed(2)}</div>
+                        )}
                         <div className="font-bold text-blue-600 dark:text-blue-400">V: ${parseFloat(p.precioVenta).toFixed(2)}</div>
                       </td>
                       <td className="px-6 py-3.5 text-center">
@@ -448,6 +460,10 @@ export default function Inventory() {
                           {/* Duplicar */}
                           <button
                             onClick={() => {
+                              if (!hasPermission('crear_editar_productos')) {
+                                alert('No tienes permisos para duplicar productos.');
+                                return;
+                              }
                               if (confirm('¿Deseas duplicar este producto?')) {
                                 duplicateMutation.mutate(p.id);
                               }
@@ -468,6 +484,10 @@ export default function Inventory() {
                           {/* Eliminar */}
                           <button
                             onClick={() => {
+                              if (!hasPermission('eliminar_productos')) {
+                                alert('No tienes permisos para eliminar productos.');
+                                return;
+                              }
                               if (confirm('¿Deseas eliminar este producto del inventario? (No se borrará del historial de ventas antiguas)')) {
                                 deleteMutation.mutate(p.id);
                               }
@@ -554,17 +574,21 @@ export default function Inventory() {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold mb-1 text-slate-500">Precio Compra (Costo)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    className="w-full px-3 py-2 border rounded-lg bg-background text-sm font-semibold"
-                    value={prodForm.precioCompra}
-                    onChange={(e) => setProdForm({ ...prodForm, precioCompra: e.target.value })}
-                    required
-                  />
-                </div>
+                {hasPermission('ver_utilidades') ? (
+                  <div>
+                    <label className="block text-xs font-semibold mb-1 text-slate-500">Precio Compra (Costo)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      className="w-full px-3 py-2 border rounded-lg bg-background text-sm font-semibold"
+                      value={prodForm.precioCompra}
+                      onChange={(e) => setProdForm({ ...prodForm, precioCompra: e.target.value })}
+                      required
+                    />
+                  </div>
+                ) : (
+                  <input type="hidden" value={prodForm.precioCompra || '0'} />
+                )}
 
                 <div>
                   <label className="block text-xs font-semibold mb-1 text-slate-500">Precio Venta</label>

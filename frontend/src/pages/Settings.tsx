@@ -78,6 +78,69 @@ export default function Settings() {
     }
   });
 
+  // Gestión de Roles y Permisos
+  const [showRoleModal, setShowRoleModal] = useState(false);
+  const [editingRole, setEditingRole] = useState<any | null>(null);
+  const [roleForm, setRoleForm] = useState<{
+    name: string;
+    description: string;
+    permissionIds: number[];
+  }>({
+    name: '',
+    description: '',
+    permissionIds: []
+  });
+
+  // Consultar Roles
+  const { data: roles = [], isLoading: loadingRoles } = useQuery<any[]>({
+    queryKey: ['rolesList'],
+    queryFn: async () => {
+      const res = await fetch('http://localhost:3001/api/auth/roles');
+      return res.json();
+    }
+  });
+
+  // Consultar Permisos Base
+  const { data: permissions = [] } = useQuery<any[]>({
+    queryKey: ['permissionsList'],
+    queryFn: async () => {
+      const res = await fetch('http://localhost:3001/api/auth/permissions');
+      return res.json();
+    }
+  });
+
+  // Mutación: Guardar / Editar Rol
+  const saveRoleMutation = useMutation({
+    mutationFn: async (payload: any) => {
+      const isEdit = !!payload.id;
+      const url = isEdit 
+        ? `http://localhost:3001/api/auth/roles/${payload.id}`
+        : 'http://localhost:3001/api/auth/roles';
+      const method = isEdit ? 'PUT' : 'POST';
+      
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || 'Error al guardar el rol');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['rolesList'] });
+      queryClient.invalidateQueries({ queryKey: ['usersList'] });
+      alert(editingRole ? 'Rol modificado con éxito.' : 'Rol creado con éxito.');
+      setShowRoleModal(false);
+    },
+    onError: (err: any) => {
+      alert(err.message);
+    }
+  });
+
 
   // Estados de carga de datos
   const [form, setForm] = useState({
@@ -358,6 +421,66 @@ export default function Settings() {
               )}
             </div>
           </div>
+
+          {/* Gestión de Roles y Permisos */}
+          <div className="border bg-card rounded-2xl p-5 shadow-sm space-y-4">
+            <div className="flex justify-between items-center border-b pb-3">
+              <h2 className="text-base font-bold font-outfit flex items-center gap-1.5 text-slate-800 dark:text-slate-100">
+                <Users size={18} className="text-blue-500" /> Roles y Permisos
+              </h2>
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingRole(null);
+                  setRoleForm({ name: '', description: '', permissionIds: [] });
+                  setShowRoleModal(true);
+                }}
+                className="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[10px] font-bold transition-all shadow-md shadow-blue-500/10"
+              >
+                + Crear Rol
+              </button>
+            </div>
+
+            <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+              {loadingRoles ? (
+                <div className="text-xs text-muted-foreground py-4 text-center">Cargando roles...</div>
+              ) : roles.length === 0 ? (
+                <div className="text-xs text-muted-foreground py-4 text-center">No hay roles registrados.</div>
+              ) : (
+                roles.map((r: any) => (
+                  <div key={r.id} className="p-2.5 border rounded-xl flex justify-between items-start text-xs bg-muted/10">
+                    <div className="space-y-1 max-w-[70%]">
+                      <span className="font-bold block text-slate-800 dark:text-slate-200">{r.name}</span>
+                      {r.description && <span className="text-[10px] text-muted-foreground block leading-tight">{r.description}</span>}
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {r.permissions.map((p: any) => (
+                          <span key={p.id} className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                            {p.name}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingRole(r);
+                        setRoleForm({
+                          name: r.name,
+                          description: r.description || '',
+                          permissionIds: r.permissions.map((p: any) => p.id)
+                        });
+                        setShowRoleModal(true);
+                      }}
+                      className="px-2 py-1 bg-slate-100 dark:bg-slate-800 hover:bg-blue-500 hover:text-white rounded text-[10px] font-bold transition-all text-slate-600 dark:text-slate-300"
+                    >
+                      Permisos
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
         </div>
 
       </div>
@@ -478,8 +601,9 @@ export default function Settings() {
                   value={userForm.roleId}
                   onChange={(e) => setUserForm({ ...userForm, roleId: e.target.value })}
                 >
-                  <option value="2">Cajero</option>
-                  <option value="1">Administrador</option>
+                  {roles.map((r: any) => (
+                    <option key={r.id} value={r.id.toString()}>{r.name}</option>
+                  ))}
                 </select>
               </div>
 
@@ -512,6 +636,108 @@ export default function Settings() {
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-semibold shadow-lg shadow-blue-500/10"
                 >
                   {saveUserMutation.isPending ? 'Guardando...' : 'Guardar'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: REGISTRAR/EDITAR ROL */}
+      {showRoleModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md bg-card border rounded-2xl shadow-2xl p-6 relative animate-in fade-in duration-150">
+            <h2 className="text-xl font-bold font-outfit mb-3">
+              {editingRole ? 'Editar Permisos del Rol' : 'Crear Nuevo Rol'}
+            </h2>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!roleForm.name.trim()) return;
+                saveRoleMutation.mutate({
+                  id: editingRole?.id,
+                  name: roleForm.name.trim(),
+                  description: roleForm.description.trim(),
+                  permissionIds: roleForm.permissionIds
+                });
+              }}
+              className="space-y-4"
+            >
+              <div>
+                <label className="block text-xs font-semibold mb-1 text-slate-500">Nombre del Rol</label>
+                <input
+                  type="text"
+                  placeholder="Ej: Cajero Limitado, Supervisor"
+                  className="w-full px-3 py-2 border rounded-lg bg-background text-sm font-semibold"
+                  value={roleForm.name}
+                  onChange={(e) => setRoleForm({ ...roleForm, name: e.target.value })}
+                  disabled={editingRole?.name === 'Administrador' || editingRole?.name === 'Cajero'}
+                  autoFocus
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold mb-1 text-slate-500">Descripción</label>
+                <input
+                  type="text"
+                  placeholder="Ej: Acceso a ventas, sin ver inventario"
+                  className="w-full px-3 py-2 border rounded-lg bg-background text-sm"
+                  value={roleForm.description}
+                  onChange={(e) => setRoleForm({ ...roleForm, description: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold mb-2 text-slate-500">Permisos Asignados</label>
+                <div className="space-y-2 border rounded-lg p-3 bg-muted/10 max-h-[200px] overflow-y-auto">
+                  {permissions.map((p: any) => {
+                    const isChecked = roleForm.permissionIds.includes(p.id);
+                    return (
+                      <div key={p.id} className="flex items-start gap-2.5 py-1">
+                        <input
+                          type="checkbox"
+                          id={`perm-${p.id}`}
+                          className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-gray-300 mt-0.5"
+                          checked={isChecked}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setRoleForm({
+                                ...roleForm,
+                                permissionIds: [...roleForm.permissionIds, p.id]
+                              });
+                            } else {
+                              setRoleForm({
+                                ...roleForm,
+                                permissionIds: roleForm.permissionIds.filter(id => id !== p.id)
+                              });
+                            }
+                          }}
+                        />
+                        <label htmlFor={`perm-${p.id}`} className="text-xs cursor-pointer select-none">
+                          <span className="font-bold text-slate-700 dark:text-slate-300 block">{p.name}</span>
+                          <span className="text-[10px] text-muted-foreground leading-normal">{p.description}</span>
+                        </label>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="flex gap-3 justify-end pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowRoleModal(false)}
+                  className="px-4 py-2 border rounded-xl hover:bg-accent text-sm"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={saveRoleMutation.isPending}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-semibold shadow-lg shadow-blue-500/10"
+                >
+                  {saveRoleMutation.isPending ? 'Guardando...' : 'Guardar'}
                 </button>
               </div>
             </form>

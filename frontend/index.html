@@ -9,6 +9,36 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+      (function() {
+        const originalAlert = window.alert;
+        window.alert = function(msg) {
+          originalAlert(msg);
+          if (window.electronAPI && window.electronAPI.fixFocus) {
+            window.electronAPI.fixFocus();
+          }
+        };
+        const originalConfirm = window.confirm;
+        window.confirm = function(msg) {
+          const res = originalConfirm(msg);
+          if (window.electronAPI && window.electronAPI.fixFocus) {
+            window.electronAPI.fixFocus();
+          }
+          return res;
+        };
+
+        // Forzar foco en la carga inicial del documento
+        window.addEventListener('DOMContentLoaded', () => {
+          setTimeout(() => {
+            window.focus();
+            document.body.focus();
+            // Buscar si hay algún input autoFocus y darle el foco
+            const autoFocusEl = document.querySelector('[autofocus]');
+            if (autoFocusEl) autoFocusEl.focus();
+          }, 300);
+        });
+      })();
+    </script>
   </head>
   <body class="overflow-hidden select-none">
     <div id="root"></div>

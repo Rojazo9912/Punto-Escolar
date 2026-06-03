@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useSessionStore } from '../store/sessionStore';
 import { 
   TrendingUp, 
   Calendar, 
@@ -27,6 +28,10 @@ interface MetricData {
 }
 
 export default function Dashboard() {
+  const currentUser = useSessionStore(state => state.user);
+  const hasPermission = useSessionStore(state => state.hasPermission);
+  const isAdmin = currentUser?.role.name === 'Administrador';
+
   const { data, isLoading, isError, refetch, isFetching } = useQuery<MetricData>({
     queryKey: ['dashboardMetrics'],
     queryFn: async () => {
@@ -78,7 +83,7 @@ export default function Dashboard() {
       ) : (
         <>
           {/* Tarjetas de Indicadores */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+          <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-${hasPermission('ver_utilidades') ? '5' : '4'} gap-6`}>
             
             {/* Ventas del Día */}
             <div className="border bg-card rounded-2xl p-5 hover:shadow-lg hover:border-blue-500/30 active:scale-[0.99] transition-all flex flex-col justify-between">
@@ -113,20 +118,22 @@ export default function Dashboard() {
             </div>
 
             {/* Ganancia del Día */}
-            <div className="border bg-card rounded-2xl p-5 hover:shadow-lg hover:border-purple-500/30 active:scale-[0.99] transition-all flex flex-col justify-between">
-              <div className="flex justify-between items-start">
-                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Ganancia Estimada</span>
-                <div className="p-2 bg-purple-500/10 rounded-xl text-purple-500">
-                  <DollarSign size={20} />
+            {hasPermission('ver_utilidades') && (
+              <div className="border bg-card rounded-2xl p-5 hover:shadow-lg hover:border-purple-500/30 active:scale-[0.99] transition-all flex flex-col justify-between">
+                <div className="flex justify-between items-start">
+                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Ganancia Estimada</span>
+                  <div className="p-2 bg-purple-500/10 rounded-xl text-purple-500">
+                    <DollarSign size={20} />
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <h3 className="text-2xl font-extrabold tracking-tight font-outfit text-purple-600 dark:text-purple-400">
+                    ${m.gananciaDia.toFixed(2)}
+                  </h3>
+                  <span className="text-xs text-muted-foreground mt-1 block">Total ventas - costo compra</span>
                 </div>
               </div>
-              <div className="mt-4">
-                <h3 className="text-2xl font-extrabold tracking-tight font-outfit text-purple-600 dark:text-purple-400">
-                  ${m.gananciaDia.toFixed(2)}
-                </h3>
-                <span className="text-xs text-muted-foreground mt-1 block">Total ventas - costo compra</span>
-              </div>
-            </div>
+            )}
 
             {/* Productos Vendidos */}
             <div className="border bg-card rounded-2xl p-5 hover:shadow-lg hover:border-orange-500/30 active:scale-[0.99] transition-all flex flex-col justify-between">
@@ -165,7 +172,7 @@ export default function Dashboard() {
           </div>
 
           {/* Actividades Recientes */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className={`grid grid-cols-1 lg:grid-cols-${isAdmin ? '3' : '1'} gap-6`}>
 
             {/* Últimas Ventas */}
             <div className="border bg-card rounded-2xl p-5 space-y-4">
@@ -200,69 +207,73 @@ export default function Dashboard() {
             </div>
 
             {/* Últimos Movimientos Inventario */}
-            <div className="border bg-card rounded-2xl p-5 space-y-4">
-              <div className="flex items-center gap-2 border-b pb-3">
-                <Archive className="text-purple-500" size={18} />
-                <h2 className="font-bold text-lg font-outfit">Auditoría de Inventario</h2>
-              </div>
-              <div className="divide-y space-y-3">
-                {recentMovements.length === 0 ? (
-                  <p className="text-sm text-muted-foreground py-4 text-center">No hay movimientos registrados.</p>
-                ) : (
-                  recentMovements.map((mov) => (
-                    <div key={mov.id} className="flex justify-between items-center pt-3 first:pt-0">
-                      <div className="w-[70%]">
-                        <div className="font-semibold text-sm truncate">{mov.product?.nombre}</div>
-                        <div className="text-xs text-muted-foreground mt-0.5 truncate">{mov.motivo}</div>
-                      </div>
-                      <div className="text-right">
-                        <span className={`inline-flex items-center gap-0.5 text-xs font-bold px-2 py-0.5 rounded-full ${mov.tipo === 'ENTRADA' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-red-500/10 text-red-500'}`}>
-                          {mov.tipo === 'ENTRADA' ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
-                          {Math.abs(mov.cantidad)} uds
-                        </span>
-                        <div className="text-[10px] text-muted-foreground mt-0.5">
-                          {new Date(mov.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            {isAdmin && (
+              <div className="border bg-card rounded-2xl p-5 space-y-4">
+                <div className="flex items-center gap-2 border-b pb-3">
+                  <Archive className="text-purple-500" size={18} />
+                  <h2 className="font-bold text-lg font-outfit">Auditoría de Inventario</h2>
+                </div>
+                <div className="divide-y space-y-3">
+                  {recentMovements.length === 0 ? (
+                    <p className="text-sm text-muted-foreground py-4 text-center">No hay movimientos registrados.</p>
+                  ) : (
+                    recentMovements.map((mov) => (
+                      <div key={mov.id} className="flex justify-between items-center pt-3 first:pt-0">
+                        <div className="w-[70%]">
+                          <div className="font-semibold text-sm truncate">{mov.product?.nombre}</div>
+                          <div className="text-xs text-muted-foreground mt-0.5 truncate">{mov.motivo}</div>
+                        </div>
+                        <div className="text-right">
+                          <span className={`inline-flex items-center gap-0.5 text-xs font-bold px-2 py-0.5 rounded-full ${mov.tipo === 'ENTRADA' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-red-500/10 text-red-500'}`}>
+                            {mov.tipo === 'ENTRADA' ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
+                            {Math.abs(mov.cantidad)} uds
+                          </span>
+                          <div className="text-[10px] text-muted-foreground mt-0.5">
+                            {new Date(mov.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))
-                )}
+                    ))
+                  )}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Últimos Cortes de Caja */}
-            <div className="border bg-card rounded-2xl p-5 space-y-4">
-              <div className="flex items-center gap-2 border-b pb-3">
-                <Wallet className="text-orange-500" size={18} />
-                <h2 className="font-bold text-lg font-outfit">Últimos Arqueos/Cortes</h2>
-              </div>
-              <div className="divide-y space-y-3">
-                {recentCortes.length === 0 ? (
-                  <p className="text-sm text-muted-foreground py-4 text-center">No hay turnos cerrados recientemente.</p>
-                ) : (
-                  recentCortes.map((corte) => (
-                    <div key={corte.id} className="flex justify-between items-center pt-3 first:pt-0">
-                      <div>
-                        <div className="font-semibold text-sm">
-                          Corte #{corte.id}
+            {isAdmin && (
+              <div className="border bg-card rounded-2xl p-5 space-y-4">
+                <div className="flex items-center gap-2 border-b pb-3">
+                  <Wallet className="text-orange-500" size={18} />
+                  <h2 className="font-bold text-lg font-outfit">Últimos Arqueos/Cortes</h2>
+                </div>
+                <div className="divide-y space-y-3">
+                  {recentCortes.length === 0 ? (
+                    <p className="text-sm text-muted-foreground py-4 text-center">No hay turnos cerrados recientemente.</p>
+                  ) : (
+                    recentCortes.map((corte) => (
+                      <div key={corte.id} className="flex justify-between items-center pt-3 first:pt-0">
+                        <div>
+                          <div className="font-semibold text-sm">
+                            Corte #{corte.id}
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-0.5">
+                            Cajero: {corte.user?.username} | Cierre: {new Date(corte.fechaCierre).toLocaleDateString()}
+                          </div>
                         </div>
-                        <div className="text-xs text-muted-foreground mt-0.5">
-                          Cajero: {corte.user?.username} | Cierre: {new Date(corte.fechaCierre).toLocaleDateString()}
+                        <div className="text-right">
+                          <div className="font-bold text-sm">
+                            Físico: ${parseFloat(corte.totalContado).toFixed(2)}
+                          </div>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${parseFloat(corte.diferencia) >= 0 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-red-500/10 text-red-500'}`}>
+                            Dif: ${parseFloat(corte.diferencia).toFixed(2)}
+                          </span>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="font-bold text-sm">
-                          Físico: ${parseFloat(corte.totalContado).toFixed(2)}
-                        </div>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${parseFloat(corte.diferencia) >= 0 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-red-500/10 text-red-500'}`}>
-                          Dif: ${parseFloat(corte.diferencia).toFixed(2)}
-                        </span>
-                      </div>
-                    </div>
-                  ))
-                )}
+                    ))
+                  )}
+                </div>
               </div>
-            </div>
+            )}
 
           </div>
         </>

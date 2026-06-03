@@ -28,8 +28,7 @@ import {
   Settings as SettingsIcon,
   LogOut,
   Moon,
-  Sun,
-  Store
+  Sun
 } from 'lucide-react';
 
 
@@ -91,8 +90,8 @@ export default function App() {
         <div className="p-4 space-y-4">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-2">
-              <div className="p-1.5 bg-blue-600 rounded-lg text-white">
-                <Store size={20} />
+              <div className="w-8 h-8 rounded-lg overflow-hidden border bg-white flex items-center justify-center shadow-sm shrink-0">
+                <img src="./logo.png" alt="Logo" className="w-full h-full object-contain" />
               </div>
               <span className="font-extrabold text-base font-outfit tracking-tight">Punto Escolar</span>
             </div>
