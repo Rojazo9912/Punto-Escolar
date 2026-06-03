@@ -77,6 +77,8 @@ export default function POS() {
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [showSuspendedModal, setShowSuspendedModal] = useState(false);
   const [suspendedSalesList, setSuspendedSalesList] = useState<any[]>([]);
+  const [showSuspendPromptModal, setShowSuspendPromptModal] = useState(false);
+  const [suspendDescription, setSuspendDescription] = useState('');
 
   // Estados de Pago
   const [formaPago, setFormaPago] = useState<'EFECTIVO' | 'TARJETA' | 'TRANSFERENCIA' | 'MIXTO'>('EFECTIVO');
@@ -254,10 +256,16 @@ export default function POS() {
     });
   };
 
-  // Suspender Venta
-  const handleSuspendSale = async () => {
-    const desc = prompt('Nombre o identificador para la venta suspendida (Ej: Cliente Copias):');
-    if (!desc) return;
+  // Abrir modal de suspensión
+  const handleSuspendSale = () => {
+    setSuspendDescription('');
+    setShowSuspendPromptModal(true);
+  };
+
+  // Confirmar la suspensión de la venta
+  const confirmSuspendSale = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!suspendDescription.trim()) return;
 
     try {
       const res = await fetch('http://localhost:3001/api/sales/suspend', {
@@ -265,13 +273,16 @@ export default function POS() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           items: cartItems,
-          clienteNombre: desc,
+          clienteNombre: suspendDescription.trim(),
           userId: currentUser?.id
         })
       });
       if (res.ok) {
         clearCart();
         loadSuspendedSales();
+        setShowSuspendPromptModal(false);
+      } else {
+        alert('Error al suspender venta');
       }
     } catch (err) {
       alert('Error de red al suspender venta');
@@ -889,6 +900,47 @@ export default function POS() {
                 Cancelar
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: IDENTIFICAR VENTA SUSPENDIDA */}
+      {showSuspendPromptModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm bg-card border rounded-2xl shadow-2xl p-6 relative animate-in fade-in duration-150">
+            <h2 className="text-xl font-bold font-outfit mb-3">Suspender Carrito de Venta</h2>
+            <p className="text-xs text-muted-foreground mb-4">
+              Ingresa un nombre o identificador para guardar esta venta en espera (Ej: Cliente Copias, Mesa 1, etc.).
+            </p>
+            <form onSubmit={confirmSuspendSale} className="space-y-4">
+              <div>
+                <input
+                  type="text"
+                  placeholder="Nombre / Identificador..."
+                  className="w-full px-3 py-2 border rounded-lg bg-background text-sm font-semibold"
+                  value={suspendDescription}
+                  onChange={(e) => setSuspendDescription(e.target.value)}
+                  autoFocus
+                  required
+                />
+              </div>
+
+              <div className="flex gap-3 justify-end pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowSuspendPromptModal(false)}
+                  className="px-4 py-2 border rounded-xl hover:bg-accent text-sm"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-semibold"
+                >
+                  Confirmar
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

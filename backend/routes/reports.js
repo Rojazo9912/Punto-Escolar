@@ -4,6 +4,16 @@ const prisma = require('../prismaClient');
 const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
 
+// Helper para parsear fecha en formato YYYY-MM-DD a medianoche/fin de día en hora local
+function parseLocalDate(dateStr, endOfDay = false) {
+  if (!dateStr) return new Date();
+  const [year, month, day] = dateStr.split('-').map(Number);
+  if (endOfDay) {
+    return new Date(year, month - 1, day, 23, 59, 59, 999);
+  }
+  return new Date(year, month - 1, day, 0, 0, 0, 0);
+}
+
 // --- ENDPOINTS DE CONSULTA JSON ---
 
 // 1. Reporte de Ventas por filtros
@@ -23,10 +33,8 @@ router.get('/sales-summary', async (req, res) => {
     } else if (filterType === 'month') {
       start = new Date(start.getFullYear(), start.getMonth(), 1);
     } else if (filterType === 'range' && startDate && endDate) {
-      start = new Date(startDate);
-      start.setHours(0, 0, 0, 0);
-      end = new Date(endDate);
-      end.setHours(23, 59, 59, 999);
+      start = parseLocalDate(startDate, false);
+      end = parseLocalDate(endDate, true);
     }
 
     const sales = await prisma.sale.findMany({
@@ -161,10 +169,8 @@ router.get('/sales/pdf', async (req, res) => {
     end.setHours(23, 59, 59, 999);
 
     if (startDate && endDate) {
-      start = new Date(startDate);
-      start.setHours(0, 0, 0, 0);
-      end = new Date(endDate);
-      end.setHours(23, 59, 59, 999);
+      start = parseLocalDate(startDate, false);
+      end = parseLocalDate(endDate, true);
     }
 
     const sales = await prisma.sale.findMany({
@@ -236,10 +242,8 @@ router.get('/sales/excel', async (req, res) => {
     end.setHours(23, 59, 59, 999);
 
     if (startDate && endDate) {
-      start = new Date(startDate);
-      start.setHours(0, 0, 0, 0);
-      end = new Date(endDate);
-      end.setHours(23, 59, 59, 999);
+      start = parseLocalDate(startDate, false);
+      end = parseLocalDate(endDate, true);
     }
 
     const sales = await prisma.sale.findMany({

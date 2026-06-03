@@ -7,7 +7,8 @@ import {
   Building, 
   FileCheck,
   Search,
-  FileDown
+  FileDown,
+  Users
 } from 'lucide-react';
 
 interface AuditLog {
@@ -26,6 +27,57 @@ export default function Settings() {
   
   // Bitácora search
   const [logSearch, setLogSearch] = useState('');
+
+  // Gestión de Usuarios
+  const [showUserModal, setShowUserModal] = useState(false);
+  const [editingUser, setEditingUser] = useState<any | null>(null);
+  const [userForm, setUserForm] = useState({
+    username: '',
+    password: '',
+    roleId: '2',
+    active: true
+  });
+
+  // Consultar Cajeros (Usuarios)
+  const { data: users = [], isLoading: loadingUsers } = useQuery<any[]>({
+    queryKey: ['usersList'],
+    queryFn: async () => {
+      const res = await fetch('http://localhost:3001/api/auth/users');
+      return res.json();
+    }
+  });
+
+  // Mutación: Guardar / Editar Usuario
+  const saveUserMutation = useMutation({
+    mutationFn: async (payload: any) => {
+      const isEdit = !!payload.id;
+      const url = isEdit 
+        ? `http://localhost:3001/api/auth/users/${payload.id}`
+        : 'http://localhost:3001/api/auth/users';
+      const method = isEdit ? 'PUT' : 'POST';
+      
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || 'Error al guardar el usuario');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['usersList'] });
+      alert(editingUser ? 'Usuario modificado con éxito.' : 'Cajero registrado con éxito.');
+      setShowUserModal(false);
+    },
+    onError: (err: any) => {
+      alert(err.message);
+    }
+  });
+
 
   // Estados de carga de datos
   const [form, setForm] = useState({
@@ -229,8 +281,9 @@ export default function Settings() {
           </div>
         </div>
 
-        {/* Panel Derecho: Copias de seguridad y restauración */}
+        {/* Panel Derecho: Mantenimiento y Usuarios */}
         <div className="space-y-6">
+          {/* Mantenimiento de Base de Datos */}
           <div className="border bg-card rounded-2xl p-5 shadow-sm space-y-4">
             <h2 className="text-base font-bold font-outfit flex items-center gap-1.5 border-b pb-3 text-red-500">
               <Database size={18} /> Mantenimiento de Base de Datos
@@ -248,6 +301,62 @@ export default function Settings() {
               <FileDown size={16} />
               {restoreMutation.isPending ? 'Restaurando...' : 'Restaurar Base de Datos'}
             </button>
+          </div>
+
+          {/* Gestión de Usuarios y Cajeros */}
+          <div className="border bg-card rounded-2xl p-5 shadow-sm space-y-4">
+            <div className="flex justify-between items-center border-b pb-3">
+              <h2 className="text-base font-bold font-outfit flex items-center gap-1.5 text-slate-800 dark:text-slate-100">
+                <Users size={18} className="text-blue-500" /> Gestión de Cajeros
+              </h2>
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingUser(null);
+                  setUserForm({ username: '', password: '', roleId: '2', active: true });
+                  setShowUserModal(true);
+                }}
+                className="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[10px] font-bold transition-all shadow-md shadow-blue-500/10"
+              >
+                + Registrar
+              </button>
+            </div>
+
+            <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+              {loadingUsers ? (
+                <div className="text-xs text-muted-foreground py-4 text-center">Cargando cajeros...</div>
+              ) : users.length === 0 ? (
+                <div className="text-xs text-muted-foreground py-4 text-center">No hay usuarios registrados.</div>
+              ) : (
+                users.map(u => (
+                  <div key={u.id} className="p-2 border rounded-xl flex justify-between items-center text-xs bg-muted/10">
+                    <div>
+                      <span className="font-bold block text-slate-800 dark:text-slate-200">{u.username}</span>
+                      <span className="text-[10px] text-muted-foreground font-semibold">
+                        Rol: {u.role.name} | Status: {u.active ? 'Activo' : 'Inactivo'}
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingUser(u);
+                        setUserForm({
+                          username: u.username,
+                          password: '', // Password en blanco para no sobreescribir si no se edita
+                          roleId: u.roleId.toString(),
+                          active: u.active
+                        });
+                        setShowUserModal(true);
+                      }}
+                      className="px-2 py-1 bg-slate-100 dark:bg-slate-800 hover:bg-blue-500 hover:text-white rounded text-[10px] font-bold transition-all text-slate-600 dark:text-slate-300"
+                    >
+                      Editar
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
 
@@ -306,6 +415,106 @@ export default function Settings() {
                 )}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: REGISTRAR/EDITAR USUARIO */}
+      {showUserModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm bg-card border rounded-2xl shadow-2xl p-6 relative animate-in fade-in duration-150">
+            <h2 className="text-xl font-bold font-outfit mb-3">
+              {editingUser ? 'Modificar Usuario' : 'Registrar Nuevo Cajero'}
+            </h2>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!userForm.username.trim()) return;
+                if (!editingUser && !userForm.password) {
+                  alert('La contraseña es obligatoria para nuevos usuarios');
+                  return;
+                }
+                saveUserMutation.mutate({
+                  id: editingUser?.id,
+                  username: userForm.username.trim(),
+                  password: userForm.password ? userForm.password : undefined,
+                  roleId: parseInt(userForm.roleId),
+                  active: userForm.active
+                });
+              }}
+              className="space-y-4"
+            >
+              <div>
+                <label className="block text-xs font-semibold mb-1 text-slate-500">Nombre de Usuario</label>
+                <input
+                  type="text"
+                  placeholder="Ej: cajero2, supervisor"
+                  className="w-full px-3 py-2 border rounded-lg bg-background text-sm font-semibold"
+                  value={userForm.username}
+                  onChange={(e) => setUserForm({ ...userForm, username: e.target.value })}
+                  autoFocus
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold mb-1 text-slate-500">
+                  Contraseña {editingUser && '(Dejar en blanco para no cambiar)'}
+                </label>
+                <input
+                  type="password"
+                  placeholder={editingUser ? '••••••••' : 'Ingresa contraseña'}
+                  className="w-full px-3 py-2 border rounded-lg bg-background text-sm"
+                  value={userForm.password}
+                  onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
+                  required={!editingUser}
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold mb-1 text-slate-500">Rol de Usuario</label>
+                <select
+                  className="w-full px-3 py-2 border rounded-lg bg-background text-sm font-semibold focus:outline-none"
+                  value={userForm.roleId}
+                  onChange={(e) => setUserForm({ ...userForm, roleId: e.target.value })}
+                >
+                  <option value="2">Cajero</option>
+                  <option value="1">Administrador</option>
+                </select>
+              </div>
+
+              {editingUser && (
+                <div className="flex items-center gap-2 py-1">
+                  <input
+                    type="checkbox"
+                    id="userActiveCheck"
+                    className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-gray-300"
+                    checked={userForm.active}
+                    onChange={(e) => setUserForm({ ...userForm, active: e.target.checked })}
+                  />
+                  <label htmlFor="userActiveCheck" className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Usuario Activo (Permite iniciar sesión)
+                  </label>
+                </div>
+              )}
+
+              <div className="flex gap-3 justify-end pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowUserModal(false)}
+                  className="px-4 py-2 border rounded-xl hover:bg-accent text-sm"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={saveUserMutation.isPending}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-semibold shadow-lg shadow-blue-500/10"
+                >
+                  {saveUserMutation.isPending ? 'Guardando...' : 'Guardar'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

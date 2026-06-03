@@ -23,6 +23,29 @@
   "devDependencies": {
     "concurrently": "^8.2.2",
     "electron": "^31.0.0",
+    "electron-builder": "^26.8.1",
     "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "com.puntoescolar.app",
+    "productName": "Punto Escolar",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "desktop/**/*",
+      "backend/**/*",
+      "frontend/dist/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
   }
 }
