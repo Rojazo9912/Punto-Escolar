@@ -1,0 +1,265 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id              Int                @id @default(autoincrement())
+  username        String             @unique
+  password        String
+  roleId          Int
+  active          Boolean            @default(true)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  role            Role               @relation(fields: [roleId], references: [id])
+  sales           Sale[]
+  cashRegisters   CashRegister[]
+  cashMovements   CashMovement[]
+  auditLogs       AuditLog[]
+
+  @@map("users")
+}
+
+model Role {
+  id          Int          @id @default(autoincrement())
+  name        String       @unique
+  description String?
+  users       User[]
+  permissions Permission[] @relation("RolePermissions")
+
+  @@map("roles")
+}
+
+model Permission {
+  id          Int     @id @default(autoincrement())
+  name        String  @unique
+  description String?
+  roles       Role[]  @relation("RolePermissions")
+
+  @@map("permissions")
+}
+
+model Category {
+  id        Int       @id @default(autoincrement())
+  name      String    @unique
+  active    Boolean   @default(true)
+  products  Product[]
+
+  @@map("categories")
+}
+
+model Product {
+  id                 Int                 @id @default(autoincrement())
+  nombre             String
+  codigoBarras       String?             @unique @map("codigo_barras")
+  sku                String?             @unique
+  descripcion        String?
+  categoryId         Int                 @map("category_id")
+  marca              String?
+  precioCompra       Decimal             @db.Decimal(10, 2) @map("precio_compra")
+  precioVenta        Decimal             @db.Decimal(10, 2) @map("precio_venta")
+  stock              Int                 @default(0)
+  stockMinimo        Int                 @default(5) @map("stock_minimo")
+  activo             Boolean             @default(true)
+  fechaCreacion      DateTime            @default(now()) @map("fecha_creacion")
+  fechaActualizacion DateTime            @updatedAt @map("fecha_actualizacion")
+  category           Category            @relation(fields: [categoryId], references: [id])
+  inventoryMovements InventoryMovement[]
+  saleItems          SaleItem[]
+  schoolListItems    SchoolListItem[]
+
+  @@map("products")
+}
+
+model InventoryMovement {
+  id        Int      @id @default(autoincrement())
+  fecha     DateTime @default(now())
+  userId    Int      @map("user_id")
+  tipo      String   // ENTRADA, SALIDA, AJUSTE
+  motivo    String
+  cantidad  Int
+  productId Int      @map("product_id")
+  product   Product  @relation(fields: [productId], references: [id])
+
+  @@map("inventory_movements")
+}
+
+model Customer {
+  id        Int      @id @default(autoincrement())
+  nombre    String
+  telefono  String?
+  correo    String?
+  notas     String?  @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  sales     Sale[]
+
+  @@map("customers")
+}
+
+model Sale {
+  id            Int            @id @default(autoincrement())
+  folio         String         @unique // Formato: V-YYYYMMDD-XXXX
+  fecha         DateTime       @default(now())
+  userId        Int            @map("user_id")
+  customerId    Int?           @map("customer_id")
+  subtotal      Decimal        @db.Decimal(10, 2)
+  descuento     Decimal        @db.Decimal(10, 2) @default(0)
+  total         Decimal        @db.Decimal(10, 2)
+  formaPago     String         @map("forma_pago") // EFECTIVO, TARJETA, TRANSFERENCIA, MIXTO
+  montoEfectivo Decimal        @default(0) @db.Decimal(10, 2) @map("monto_efectivo")
+  montoTarjeta  Decimal        @default(0) @db.Decimal(10, 2) @map("monto_tarjeta")
+  montoTransf   Decimal        @default(0) @db.Decimal(10, 2) @map("monto_transf")
+  estado        String         @default("COMPLETADA") // COMPLETADA, CANCELADA
+  user          User           @relation(fields: [userId], references: [id])
+  customer      Customer?      @relation(fields: [customerId], references: [id])
+  items         SaleItem[]
+
+  @@map("sales")
+}
+
+model SaleItem {
+  id        Int      @id @default(autoincrement())
+  saleId    Int      @map("sale_id")
+  productId Int?     @map("product_id")
+  serviceId Int?     @map("service_id")
+  nombre    String
+  cantidad  Int
+  precio    Decimal  @db.Decimal(10, 2)
+  descuento Decimal  @db.Decimal(10, 2) @default(0)
+  subtotal  Decimal  @db.Decimal(10, 2)
+  sale      Sale     @relation(fields: [saleId], references: [id])
+  product   Product? @relation(fields: [productId], references: [id])
+  service   Service? @relation(fields: [serviceId], references: [id])
+
+  @@map("sale_items")
+}
+
+model School {
+  id        Int      @id @default(autoincrement())
+  nombre    String   @unique
+  direccion String?
+  telefono  String?
+  activo    Boolean  @default(true)
+  grades    Grade[]
+
+  @@map("schools")
+}
+
+model Grade {
+  id          Int          @id @default(autoincrement())
+  schoolId    Int          @map("school_id")
+  grado       String       // e.g. "1º"
+  grupo       String       // e.g. "A"
+  cicloEscolar String      @map("ciclo_escolar") // e.g. "2025-2026"
+  school      School       @relation(fields: [schoolId], references: [id])
+  schoolLists SchoolList[]
+
+  @@map("grades")
+}
+
+model SchoolList {
+  id        Int              @id @default(autoincrement())
+  gradeId   Int              @unique @map("grade_id")
+  activo    Boolean          @default(true)
+  grade     Grade            @relation(fields: [gradeId], references: [id])
+  items     SchoolListItem[]
+
+  @@map("school_lists")
+}
+
+model SchoolListItem {
+  id           Int        @id @default(autoincrement())
+  listId       Int        @map("list_id")
+  productId    Int        @map("product_id")
+  cantidad     Int
+  observaciones String?
+  schoolList   SchoolList @relation(fields: [listId], references: [id])
+  product      Product    @relation(fields: [productId], references: [id])
+
+  @@map("school_list_items")
+}
+
+model Service {
+  id        Int        @id @default(autoincrement())
+  nombre    String     @unique
+  precio    Decimal    @db.Decimal(10, 2)
+  unidad    String     @default("Servicio") // Copia, Impresión, Escaneo, etc.
+  activo    Boolean    @default(true)
+  saleItems SaleItem[]
+
+  @@map("services")
+}
+
+model CashRegister {
+  id             Int            @id @default(autoincrement())
+  userId         Int            @map("user_id")
+  fechaApertura  DateTime       @default(now()) @map("fecha_apertura")
+  fechaCierre    DateTime?      @map("fecha_cierre")
+  montoInicial   Decimal        @db.Decimal(10, 2) @map("monto_inicial")
+  ventasEfectivo Decimal        @default(0) @db.Decimal(10, 2) @map("ventas_efectivo")
+  ventasTarjeta  Decimal        @default(0) @db.Decimal(10, 2) @map("ventas_tarjeta")
+  ventasTransf   Decimal        @default(0) @db.Decimal(10, 2) @map("ventas_transf")
+  ingresos       Decimal        @default(0) @db.Decimal(10, 2)
+  egresos        Decimal        @default(0) @db.Decimal(10, 2)
+  totalEsperado  Decimal        @default(0) @db.Decimal(10, 2) @map("total_esperado")
+  totalContado   Decimal?       @db.Decimal(10, 2) @map("total_contado")
+  diferencia     Decimal?       @db.Decimal(10, 2)
+  estado         String         @default("ABIERTA") // ABIERTA, CERRADA
+  user           User           @relation(fields: [userId], references: [id])
+  movements      CashMovement[]
+
+  @@map("cash_registers")
+}
+
+model CashMovement {
+  id          Int          @id @default(autoincrement())
+  registerId  Int          @map("register_id")
+  userId      Int          @map("user_id")
+  tipo        String       // INGRESO, EGRESO
+  monto       Decimal      @db.Decimal(10, 2)
+  descripcion String
+  fecha       DateTime     @default(now())
+  register    CashRegister @relation(fields: [registerId], references: [id])
+  user        User         @relation(fields: [userId], references: [id])
+
+  @@map("cash_movements")
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int?     @map("user_id")
+  accion    String
+  fecha     DateTime @default(now())
+  modulo    String
+  ipLocal   String   @map("ip_local")
+  user      User?    @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+}
+
+model Setting {
+  id            Int     @id @default(1)
+  nombreNegocio String  @default("Punto Escolar") @map("nombre_negocio")
+  direccion     String?
+  telefono      String?
+  correo        String?
+  rfc           String?
+  logoPath      String? @map("logo_path")
+  mensajeTicket String  @default("Gracias por su compra") @map("mensaje_ticket")
+
+  @@map("settings")
+}
+
+model Backup {
+  id            Int      @id @default(autoincrement())
+  fileName      String   @map("file_name")
+  fechaCreacion DateTime @default(now()) @map("fecha_creacion")
+  sizeBytes     Int      @map("size_bytes")
+  status        String   @default("COMPLETADO") // COMPLETADO, ERROR
+
+  @@map("backups")
+}
