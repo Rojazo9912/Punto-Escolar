@@ -1,5 +1,5 @@
 datasource db {
-  provider = "mysql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -60,8 +60,8 @@ model Product {
   descripcion        String?
   categoryId         Int                 @map("category_id")
   marca              String?
-  precioCompra       Decimal             @db.Decimal(10, 2) @map("precio_compra")
-  precioVenta        Decimal             @db.Decimal(10, 2) @map("precio_venta")
+  precioCompra       Decimal              @map("precio_compra")
+  precioVenta        Decimal              @map("precio_venta")
   stock              Int                 @default(0)
   stockMinimo        Int                 @default(5) @map("stock_minimo")
   activo             Boolean             @default(true)
@@ -93,7 +93,7 @@ model Customer {
   nombre    String
   telefono  String?
   correo    String?
-  notas     String?  @db.Text
+  notas     String?  
   createdAt DateTime @default(now()) @map("created_at")
   sales     Sale[]
 
@@ -106,13 +106,13 @@ model Sale {
   fecha         DateTime       @default(now())
   userId        Int            @map("user_id")
   customerId    Int?           @map("customer_id")
-  subtotal      Decimal        @db.Decimal(10, 2)
-  descuento     Decimal        @db.Decimal(10, 2) @default(0)
-  total         Decimal        @db.Decimal(10, 2)
+  subtotal      Decimal        
+  descuento     Decimal         @default(0)
+  total         Decimal        
   formaPago     String         @map("forma_pago") // EFECTIVO, TARJETA, TRANSFERENCIA, MIXTO
-  montoEfectivo Decimal        @default(0) @db.Decimal(10, 2) @map("monto_efectivo")
-  montoTarjeta  Decimal        @default(0) @db.Decimal(10, 2) @map("monto_tarjeta")
-  montoTransf   Decimal        @default(0) @db.Decimal(10, 2) @map("monto_transf")
+  montoEfectivo Decimal        @default(0)  @map("monto_efectivo")
+  montoTarjeta  Decimal        @default(0)  @map("monto_tarjeta")
+  montoTransf   Decimal        @default(0)  @map("monto_transf")
   estado        String         @default("COMPLETADA") // COMPLETADA, CANCELADA
   user          User           @relation(fields: [userId], references: [id])
   customer      Customer?      @relation(fields: [customerId], references: [id])
@@ -128,9 +128,9 @@ model SaleItem {
   serviceId Int?     @map("service_id")
   nombre    String
   cantidad  Int
-  precio    Decimal  @db.Decimal(10, 2)
-  descuento Decimal  @db.Decimal(10, 2) @default(0)
-  subtotal  Decimal  @db.Decimal(10, 2)
+  precio    Decimal  
+  descuento Decimal   @default(0)
+  subtotal  Decimal  
   sale      Sale     @relation(fields: [saleId], references: [id])
   product   Product? @relation(fields: [productId], references: [id])
   service   Service? @relation(fields: [serviceId], references: [id])
@@ -186,7 +186,7 @@ model SchoolListItem {
 model Service {
   id        Int        @id @default(autoincrement())
   nombre    String     @unique
-  precio    Decimal    @db.Decimal(10, 2)
+  precio    Decimal    
   unidad    String     @default("Servicio") // Copia, Impresión, Escaneo, etc.
   activo    Boolean    @default(true)
   saleItems SaleItem[]
@@ -199,15 +199,15 @@ model CashRegister {
   userId         Int            @map("user_id")
   fechaApertura  DateTime       @default(now()) @map("fecha_apertura")
   fechaCierre    DateTime?      @map("fecha_cierre")
-  montoInicial   Decimal        @db.Decimal(10, 2) @map("monto_inicial")
-  ventasEfectivo Decimal        @default(0) @db.Decimal(10, 2) @map("ventas_efectivo")
-  ventasTarjeta  Decimal        @default(0) @db.Decimal(10, 2) @map("ventas_tarjeta")
-  ventasTransf   Decimal        @default(0) @db.Decimal(10, 2) @map("ventas_transf")
-  ingresos       Decimal        @default(0) @db.Decimal(10, 2)
-  egresos        Decimal        @default(0) @db.Decimal(10, 2)
-  totalEsperado  Decimal        @default(0) @db.Decimal(10, 2) @map("total_esperado")
-  totalContado   Decimal?       @db.Decimal(10, 2) @map("total_contado")
-  diferencia     Decimal?       @db.Decimal(10, 2)
+  montoInicial   Decimal         @map("monto_inicial")
+  ventasEfectivo Decimal        @default(0)  @map("ventas_efectivo")
+  ventasTarjeta  Decimal        @default(0)  @map("ventas_tarjeta")
+  ventasTransf   Decimal        @default(0)  @map("ventas_transf")
+  ingresos       Decimal        @default(0) 
+  egresos        Decimal        @default(0) 
+  totalEsperado  Decimal        @default(0)  @map("total_esperado")
+  totalContado   Decimal?        @map("total_contado")
+  diferencia     Decimal?       
   estado         String         @default("ABIERTA") // ABIERTA, CERRADA
   user           User           @relation(fields: [userId], references: [id])
   movements      CashMovement[]
@@ -220,7 +220,7 @@ model CashMovement {
   registerId  Int          @map("register_id")
   userId      Int          @map("user_id")
   tipo        String       // INGRESO, EGRESO
-  monto       Decimal      @db.Decimal(10, 2)
+  monto       Decimal      
   descripcion String
   fecha       DateTime     @default(now())
   register    CashRegister @relation(fields: [registerId], references: [id])

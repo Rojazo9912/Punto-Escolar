@@ -2,9 +2,21 @@ const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 
+const fs = require('fs');
+
 // Levantar el servidor Express del backend integrado en Electron
 let serverInstance = null;
 try {
+  if (app.isPackaged) {
+    const dbPath = path.join(app.getPath('userData'), 'database.sqlite');
+    if (!fs.existsSync(dbPath)) {
+      const templatePath = path.join(process.resourcesPath, 'app.asar', 'backend', 'prisma', 'dev.db');
+      if (fs.existsSync(templatePath)) {
+         fs.copyFileSync(templatePath, dbPath);
+         console.log('Base de datos inicializada en:', dbPath);
+      }
+    }
+  }
   // En producción y desarrollo cargamos el servidor Express en el proceso de Node.js
   const startServer = require('../backend/server.js');
   serverInstance = startServer;
@@ -60,6 +72,9 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => {
+  if (serverInstance) {
+    serverInstance.close();
+  }
   if (process.platform !== 'darwin') {
     app.quit();
   }
