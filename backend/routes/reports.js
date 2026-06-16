@@ -158,14 +158,16 @@ router.get('/products-ranking', async (req, res) => {
 
 // --- EXPORTACIÓN DE REPORTES EN PDF Y EXCEL ---
 
-// Sugerencia Inteligente de Compras (PDF)
+// Sugerencia Inteligente de Compras (PDF) — usa raw SQL para comparación campo-a-campo en SQLite
 router.get('/inventory/pdf', async (req, res) => {
   try {
-    const products = await prisma.product.findMany({
-      where: { activo: true, stock: { lte: prisma.product.fields.stockMinimo } },
-      include: { category: true },
-      orderBy: { stock: 'asc' }
-    });
+    const products = await prisma.$queryRaw`
+      SELECT p.id, p.nombre, p.sku, p.stock, p.stock_minimo as stockMinimo, c.name as categoria
+      FROM products p
+      LEFT JOIN categories c ON p.category_id = c.id
+      WHERE p.activo = 1 AND p.stock <= p.stock_minimo
+      ORDER BY c.name ASC, p.stock ASC
+    `;
 
     const doc = new PDFDocument({ margin: 50 });
     res.setHeader('Content-Type', 'application/pdf');
@@ -185,10 +187,10 @@ router.get('/inventory/pdf', async (req, res) => {
     let y = 175;
     products.forEach(p => {
       if (y > 700) { doc.addPage(); y = 50; }
-      doc.text(`${p.nombre} (${p.sku})`, 50, y, { width: 190 });
-      doc.text(p.category?.name || 'N/A', 250, y);
-      doc.text(p.stockMinimo.toString(), 380, y);
-      doc.fillColor(p.stock === 0 ? 'red' : 'orange').text(p.stock.toString(), 460, y);
+      doc.text(`${p.nombre} (${p.sku || '-'})`, 50, y, { width: 190 });
+      doc.text(p.categoria || 'N/A', 250, y);
+      doc.text(String(p.stockMinimo), 380, y);
+      doc.fillColor(p.stock === 0 ? 'red' : 'orange').text(String(p.stock), 460, y);
       doc.fillColor('black');
       y += 20;
     });

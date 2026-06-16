@@ -496,4 +496,22 @@ router.post('/excel/import', async (req, res) => {
   }
 });
 
+// Obtener productos con stock bajo (stock <= stockMinimo) agrupados por categoría
+router.get('/low-stock', async (req, res) => {
+  try {
+    const products = await prisma.$queryRaw`
+      SELECT p.id, p.nombre, p.stock, p.stock_minimo as stockMinimo,
+             p.precio_compra as precioCompra, c.name as categoria
+      FROM products p
+      LEFT JOIN categories c ON p.category_id = c.id
+      WHERE p.activo = 1 AND p.stock <= p.stock_minimo
+      ORDER BY c.name ASC, p.nombre ASC
+    `;
+    return res.json(products);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Error al obtener productos con stock bajo' });
+  }
+});
+
 module.exports = router;

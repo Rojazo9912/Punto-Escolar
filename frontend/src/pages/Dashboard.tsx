@@ -1,18 +1,32 @@
 import { useQuery } from '@tanstack/react-query';
 import { useSessionStore } from '../store/sessionStore';
-import { 
-  TrendingUp, 
-  Calendar, 
-  DollarSign, 
-  ShoppingBag, 
-  AlertTriangle, 
-  ArrowUpRight, 
+import {
+  TrendingUp,
+  Calendar,
+  DollarSign,
+  ShoppingBag,
+  AlertTriangle,
+  ArrowUpRight,
   ArrowDownRight,
   RefreshCw,
   Clock,
   Archive,
-  Wallet
+  Wallet,
+  BarChart2,
+  PieChart as PieIcon
 } from 'lucide-react';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend
+} from 'recharts';
 
 interface MetricData {
   metrics: {
@@ -54,6 +68,17 @@ export default function Dashboard() {
   };
 
   const { recentSales = [], recentMovements = [], recentCortes = [] } = data || {};
+
+  const { data: chartsData } = useQuery<{ salesByDay: any[]; gastosPorCategoria: any[] }>({
+    queryKey: ['dashboardCharts'],
+    queryFn: async () => {
+      const res = await fetch('http://localhost:3001/api/dashboard/charts');
+      if (!res.ok) throw new Error('Error al obtener gráficas');
+      return res.json();
+    }
+  });
+
+  const PIE_COLORS = ['#6366f1', '#f59e0b', '#10b981', '#ef4444', '#3b82f6', '#8b5cf6', '#ec4899'];
 
 
   return (
@@ -176,6 +201,61 @@ export default function Dashboard() {
             </div>
 
           </div>
+
+          {/* Gráficas: Ventas 7 días + Gastos por Categoría */}
+          {isAdmin && chartsData && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* BarChart: Ventas últimos 7 días */}
+              <div className="border bg-card rounded-2xl p-5 space-y-3">
+                <div className="flex items-center gap-2 border-b pb-3">
+                  <BarChart2 className="text-blue-500" size={18} />
+                  <h2 className="font-bold text-lg font-outfit">Ventas — Últimos 7 días</h2>
+                </div>
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={chartsData.salesByDay} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                    <XAxis dataKey="dia" tick={{ fontSize: 11 }} />
+                    <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}`} width={55} />
+                    <Tooltip formatter={(v: number) => [`$${v.toFixed(2)}`, 'Ventas']} />
+                    <Bar dataKey="ventas" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* PieChart: Gastos por categoría del mes */}
+              <div className="border bg-card rounded-2xl p-5 space-y-3">
+                <div className="flex items-center gap-2 border-b pb-3">
+                  <PieIcon className="text-purple-500" size={18} />
+                  <h2 className="font-bold text-lg font-outfit">Gastos del Mes por Categoría</h2>
+                </div>
+                {chartsData.gastosPorCategoria.length === 0 ? (
+                  <div className="flex items-center justify-center h-[200px] text-muted-foreground text-sm">
+                    Sin egresos categorizados este mes.
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height={200}>
+                    <PieChart>
+                      <Pie
+                        data={chartsData.gastosPorCategoria}
+                        dataKey="total"
+                        nameKey="nombre"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={70}
+                        label={({ nombre, percent }: any) => `${nombre} (${((percent ?? 0) * 100).toFixed(0)}%)`}
+                        labelLine={false}
+                      >
+                        {chartsData.gastosPorCategoria.map((_: any, idx: number) => (
+                          <Cell key={idx} fill={PIE_COLORS[idx % PIE_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(v: number) => [`$${v.toFixed(2)}`, 'Total']} />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Actividades Recientes */}
           <div className={`grid grid-cols-1 lg:grid-cols-${isAdmin ? '3' : '1'} gap-6`}>

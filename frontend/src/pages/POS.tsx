@@ -77,7 +77,6 @@ export default function POS() {
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [showSuspendedModal, setShowSuspendedModal] = useState(false);
   const [suspendedSalesList, setSuspendedSalesList] = useState<any[]>([]);
-  const [showSuspendPromptModal, setShowSuspendPromptModal] = useState(false);
 
   // Estados de Pago
   const [formaPago, setFormaPago] = useState<'EFECTIVO' | 'TARJETA' | 'TRANSFERENCIA' | 'MIXTO'>('EFECTIVO');
@@ -298,16 +297,24 @@ export default function POS() {
         if (recovered) {
           clearCart();
           if (recovered.customer) setCartCustomer(recovered.customer);
+          const stockInsuficiente: string[] = [];
           recovered.items.forEach((item: any) => {
-            addItemToCart({
+            const currentStock = item.productId
+              ? (products.find(p => p.id === item.productId)?.stock ?? 0)
+              : 99999; // servicios no tienen stock físico
+            const added = addItemToCart({
               productId: item.productId,
               serviceId: item.serviceId,
               nombre: item.nombre,
               precio: item.precio,
-              stock: 9999, // Bypass local stock check for recovery
+              stock: currentStock,
               unidad: 'pza'
             }, item.cantidad);
+            if (!added) stockInsuficiente.push(item.nombre);
           });
+          if (stockInsuficiente.length > 0) {
+            alert(`Stock insuficiente para: ${stockInsuficiente.join(', ')}. Se cargó la cotización con las cantidades disponibles.`);
+          }
         }
         setShowSuspendedModal(false);
         loadSuspendedSales();
@@ -322,6 +329,14 @@ export default function POS() {
     e.preventDefault();
     setCheckoutError('');
     setCheckoutSuccess(false);
+
+    if (formaPago === 'MIXTO') {
+      const sumMixto = parseFloat(montoEfectivo || '0') + parseFloat(montoTarjeta || '0') + parseFloat(montoTransf || '0');
+      if (sumMixto < total - 0.01) {
+        setCheckoutError(`Los montos ingresados suman $${sumMixto.toFixed(2)}, faltan $${(total - sumMixto).toFixed(2)} para cubrir el total.`);
+        return;
+      }
+    }
 
     const payload = {
       userId: currentUser?.id,
@@ -493,9 +508,14 @@ export default function POS() {
           <div className="border rounded-2xl p-4 bg-card flex flex-col overflow-hidden">
             <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-1.5 shrink-0">
               <Sparkles size={14} className="text-blue-500" /> Productos Disponibles
+              {filteredProducts.length > 0 && (
+                <span className="ml-auto font-normal text-[10px] text-muted-foreground">
+                  {filteredProducts.length} resultado{filteredProducts.length !== 1 ? 's' : ''}
+                </span>
+              )}
             </h2>
             <div className="overflow-y-auto flex-1 grid grid-cols-3 gap-3 pr-1">
-              {filteredProducts.slice(0, 18).map(p => (
+              {filteredProducts.map(p => (
                 <button
                   key={p.id}
                   onClick={() => handleAddProductClick(p)}
@@ -903,47 +923,6 @@ export default function POS() {
                 Cancelar
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL: IDENTIFICAR VENTA SUSPENDIDA */}
-      {showSuspendPromptModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="w-full max-w-sm bg-card border rounded-2xl shadow-2xl p-6 relative animate-in fade-in duration-150">
-            <h2 className="text-xl font-bold font-outfit mb-3">Suspender Carrito de Venta</h2>
-            <p className="text-xs text-muted-foreground mb-4">
-              Ingresa un nombre o identificador para guardar esta venta en espera (Ej: Cliente Copias, Mesa 1, etc.).
-            </p>
-            <form onSubmit={confirmSuspendSale} className="space-y-4">
-              <div>
-                <input
-                  type="text"
-                  placeholder="Nombre / Identificador..."
-                  className="w-full px-3 py-2 border rounded-lg bg-background text-sm font-semibold"
-                  value={suspendDescription}
-                  onChange={(e) => setSuspendDescription(e.target.value)}
-                  autoFocus
-                  required
-                />
-              </div>
-
-              <div className="flex gap-3 justify-end pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowSuspendPromptModal(false)}
-                  className="px-4 py-2 border rounded-xl hover:bg-accent text-sm"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-semibold"
-                >
-                  Confirmar
-                </button>
-              </div>
-            </form>
           </div>
         </div>
       )}

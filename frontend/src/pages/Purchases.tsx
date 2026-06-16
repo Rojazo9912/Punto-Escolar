@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSessionStore } from '../store/sessionStore';
-import { PackageOpen, Truck, Plus, Save, X, Search } from 'lucide-react';
+import { PackageOpen, Truck, Plus, Save, X, Search, AlertTriangle, FileDown } from 'lucide-react';
 
 export default function Purchases() {
   const queryClient = useQueryClient();
   const currentUser = useSessionStore(state => state.user);
   
-  const [activeTab, setActiveTab] = useState<'compras' | 'proveedores'>('compras');
+  const [activeTab, setActiveTab] = useState<'compras' | 'proveedores' | 'stockBajo'>('compras');
 
   // --- QUERIES ---
   const { data: suppliers = [], isLoading: loadSuppliers } = useQuery<any[]>({
@@ -33,6 +33,18 @@ export default function Purchases() {
       return res.json();
     }
   });
+
+  const { data: lowStockProducts = [] } = useQuery<any[]>({
+    queryKey: ['lowStockProducts'],
+    queryFn: async () => {
+      const res = await fetch('http://localhost:3001/api/products/low-stock');
+      return res.json();
+    }
+  });
+
+  const handleDownloadLowStockPdf = () => {
+    window.open('http://localhost:3001/api/reports/inventory/pdf', '_blank');
+  };
 
   // --- ESTADOS PROVEEDOR ---
   const [showSupplierModal, setShowSupplierModal] = useState(false);
@@ -137,6 +149,18 @@ export default function Purchases() {
         >
           <Truck className="inline-block mr-2" size={16} /> Proveedores
         </button>
+        <button
+          onClick={() => setActiveTab('stockBajo')}
+          className={`pb-2 px-4 font-bold text-sm border-b-2 transition-all flex items-center gap-1 ${activeTab === 'stockBajo' ? 'border-red-500 text-red-500' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
+        >
+          <AlertTriangle size={16} />
+          Sugerencia de Resurtido
+          {lowStockProducts.length > 0 && (
+            <span className="ml-1 bg-red-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">
+              {lowStockProducts.length}
+            </span>
+          )}
+        </button>
       </div>
 
       {/* CONTENIDO TABS */}
@@ -192,6 +216,71 @@ export default function Purchases() {
               ))}
               {suppliers.length === 0 && <p className="text-sm text-muted-foreground">No hay proveedores registrados.</p>}
             </div>
+          </div>
+        )}
+
+        {activeTab === 'stockBajo' && (
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="font-bold text-base flex items-center gap-2">
+                  <AlertTriangle className="text-red-500" size={18} />
+                  Productos que necesitan resurtido
+                </h2>
+                <p className="text-xs text-muted-foreground">Artículos con stock igual o menor al mínimo configurado.</p>
+              </div>
+              <button
+                onClick={handleDownloadLowStockPdf}
+                disabled={lowStockProducts.length === 0}
+                className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-500 disabled:opacity-40 text-white rounded-xl text-sm font-bold shadow-lg shadow-red-600/20"
+              >
+                <FileDown size={16} /> Descargar PDF de Faltantes
+              </button>
+            </div>
+
+            {lowStockProducts.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center gap-3">
+                <div className="p-4 bg-emerald-500/10 rounded-2xl text-emerald-500">
+                  <AlertTriangle size={32} />
+                </div>
+                <p className="font-bold text-emerald-600">¡Inventario en orden!</p>
+                <p className="text-sm text-muted-foreground">Todos los productos tienen stock por encima del mínimo configurado.</p>
+              </div>
+            ) : (
+              <div className="border rounded-xl overflow-hidden">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-red-500/5">
+                    <tr>
+                      <th className="p-3 font-bold text-red-600">Producto</th>
+                      <th className="p-3 font-bold text-red-600">Categoría</th>
+                      <th className="p-3 font-bold text-red-600 text-center">Stock Actual</th>
+                      <th className="p-3 font-bold text-red-600 text-center">Mínimo</th>
+                      <th className="p-3 font-bold text-red-600 text-center">Faltan</th>
+                      <th className="p-3 font-bold text-red-600 text-right">Costo Unitario</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {lowStockProducts.map((p: any) => {
+                      const faltan = Math.max(0, Number(p.stockMinimo) - Number(p.stock));
+                      return (
+                        <tr key={p.id} className={`hover:bg-muted/5 ${Number(p.stock) === 0 ? 'bg-red-500/5' : ''}`}>
+                          <td className="p-3 font-semibold">{p.nombre}</td>
+                          <td className="p-3 text-muted-foreground">{p.categoria || '-'}</td>
+                          <td className="p-3 text-center">
+                            <span className={`font-bold px-2 py-0.5 rounded-full text-xs ${Number(p.stock) === 0 ? 'bg-red-500 text-white' : 'bg-orange-500/10 text-orange-600'}`}>
+                              {p.stock}
+                            </span>
+                          </td>
+                          <td className="p-3 text-center text-muted-foreground">{p.stockMinimo}</td>
+                          <td className="p-3 text-center font-bold text-red-500">+{faltan}</td>
+                          <td className="p-3 text-right font-mono text-muted-foreground">${parseFloat(p.precioCompra).toFixed(2)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
       </div>
