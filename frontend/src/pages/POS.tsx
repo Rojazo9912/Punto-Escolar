@@ -78,7 +78,6 @@ export default function POS() {
   const [showSuspendedModal, setShowSuspendedModal] = useState(false);
   const [suspendedSalesList, setSuspendedSalesList] = useState<any[]>([]);
   const [showSuspendPromptModal, setShowSuspendPromptModal] = useState(false);
-  const [suspendDescription, setSuspendDescription] = useState('');
 
   // Estados de Pago
   const [formaPago, setFormaPago] = useState<'EFECTIVO' | 'TARJETA' | 'TRANSFERENCIA' | 'MIXTO'>('EFECTIVO');
@@ -158,10 +157,10 @@ export default function POS() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [cartItems]);
 
-  // Cargar ventas suspendidas
+  // Cargar Cotizaciones
   const loadSuspendedSales = async () => {
     try {
-      const res = await fetch('http://localhost:3001/api/sales/suspended/list');
+      const res = await fetch('http://localhost:3001/api/sales/quotations');
       const data = await res.json();
       setSuspendedSalesList(data);
     } catch (err) {
@@ -256,63 +255,65 @@ export default function POS() {
     });
   };
 
-  // Abrir modal de suspensión
+  // Abrir modal de cotización
   const handleSuspendSale = () => {
-    setSuspendDescription('');
-    setShowSuspendPromptModal(true);
+    confirmSuspendSale(); // Directamente cotiza sin pedir nombre (usa el cliente seleccionado)
   };
 
-  // Confirmar la suspensión de la venta
-  const confirmSuspendSale = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!suspendDescription.trim()) return;
-
+  // Confirmar cotización
+  const confirmSuspendSale = async () => {
     try {
-      const res = await fetch('http://localhost:3001/api/sales/suspend', {
+      const res = await fetch('http://localhost:3001/api/sales', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           items: cartItems,
-          clienteNombre: suspendDescription.trim(),
-          userId: currentUser?.id
+          isQuotation: true,
+          formaPago: 'COTIZACION',
+          userId: currentUser?.id,
+          customerId: cartCustomer?.id || null,
+          descuento: totalDiscount
         })
       });
       if (res.ok) {
         clearCart();
         loadSuspendedSales();
-        setShowSuspendPromptModal(false);
       } else {
-        alert('Error al suspender venta');
+        alert('Error al generar la cotización');
       }
     } catch (err) {
-      alert('Error de red al suspender venta');
+      alert('Error de red al cotizar');
     }
   };
 
-  // Recuperar Venta Suspendida
+  // Recuperar Cotización
   const handleRecoverSale = async (id: number) => {
     try {
-      const res = await fetch(`http://localhost:3001/api/sales/suspended/${id}`, {
+      const res = await fetch(`http://localhost:3001/api/sales/quotations/${id}`, {
         method: 'DELETE'
       });
       if (res.ok) {
-        const recovered = await res.json();
-        clearCart();
-        recovered.items.forEach((item: any) => {
-          addItemToCart({
-            productId: item.productId,
-            serviceId: item.serviceId,
-            nombre: item.nombre,
-            precio: item.precio,
-            stock: item.stock,
-            unidad: item.unidad
-          }, item.cantidad);
-        });
+        // Encontrar la cotización en la lista local para cargar sus items
+        const recovered = suspendedSalesList.find(s => s.id === id);
+        if (recovered) {
+          clearCart();
+          if (recovered.customer) setCartCustomer(recovered.customer);
+          recovered.items.forEach((item: any) => {
+            addItemToCart({
+              productId: item.productId,
+              serviceId: item.serviceId,
+              nombre: item.nombre,
+              precio: item.precio,
+              stock: 9999, // Bypass local stock check for recovery
+              unidad: 'pza'
+            }, item.cantidad);
+          });
+        }
         setShowSuspendedModal(false);
         loadSuspendedSales();
       }
     } catch (err) {
-      alert('Error de red al recuperar venta');
+      alert('Error de red al cargar cotización');
     }
   };
 
@@ -540,7 +541,7 @@ export default function POS() {
         <div className="flex gap-4 text-xs text-muted-foreground border-t pt-3 font-semibold shrink-0">
           <div className="flex items-center gap-1"><span className="border px-1.5 py-0.5 rounded bg-muted font-mono font-bold">F1</span> Buscar</div>
           <div className="flex items-center gap-1"><span className="border px-1.5 py-0.5 rounded bg-muted font-mono font-bold">F2</span> Cobrar</div>
-          <div className="flex items-center gap-1"><span className="border px-1.5 py-0.5 rounded bg-muted font-mono font-bold">F3</span> Suspender</div>
+          <div className="flex items-center gap-1"><span className="border px-1.5 py-0.5 rounded bg-muted font-mono font-bold">F3</span> Cotizar</div>
           <div className="flex items-center gap-1"><span className="border px-1.5 py-0.5 rounded bg-muted font-mono font-bold">F4</span> Vaciar</div>
         </div>
       </div>
@@ -576,7 +577,7 @@ export default function POS() {
             className="flex items-center gap-1.5 px-3 py-2 border rounded-xl hover:bg-accent text-xs font-bold"
           >
             <FolderOpen size={14} />
-            Recuperar ({suspendedSalesList.length})
+            Cotizaciones ({suspendedSalesList.length})
           </button>
         </div>
 
@@ -664,9 +665,9 @@ export default function POS() {
             <button
               onClick={handleSuspendSale}
               disabled={cartItems.length === 0}
-              className="py-2.5 border rounded-xl hover:bg-accent text-xs font-bold transition-all disabled:opacity-50"
+              className="py-2.5 border rounded-xl hover:bg-accent text-xs font-bold transition-all disabled:opacity-50 text-blue-600 border-blue-600/30 bg-blue-600/5 hover:bg-blue-600/10"
             >
-              F3: Suspender
+              F3: Cotización
             </button>
             <button
               onClick={handleOpenCheckout}

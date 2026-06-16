@@ -122,15 +122,16 @@ model Sale {
 }
 
 model SaleItem {
-  id        Int      @id @default(autoincrement())
-  saleId    Int      @map("sale_id")
-  productId Int?     @map("product_id")
-  serviceId Int?     @map("service_id")
-  nombre    String
-  cantidad  Int
-  precio    Decimal  
-  descuento Decimal   @default(0)
-  subtotal  Decimal  
+  id               Int      @id @default(autoincrement())
+  saleId           Int      @map("sale_id")
+  productId        Int?     @map("product_id")
+  serviceId        Int?     @map("service_id")
+  nombre           String
+  cantidad         Int
+  cantidadDevuelta Int      @default(0) @map("cantidad_devuelta")
+  precio           Decimal  
+  descuento        Decimal  @default(0)
+  subtotal         Decimal  
   sale      Sale     @relation(fields: [saleId], references: [id])
   product   Product? @relation(fields: [productId], references: [id])
   service   Service? @relation(fields: [serviceId], references: [id])

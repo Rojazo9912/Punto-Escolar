@@ -60,6 +60,12 @@ export default function Reports() {
   const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
   const [endDate, setEndDate] = useState(new Date().toISOString().slice(0, 10));
 
+  // Estado para Devoluciones Parciales
+  const [returnSale, setReturnSale] = useState<any>(null);
+  const [returnQtys, setReturnQtys] = useState<{ [id: number]: number }>({});
+  const [returnError, setReturnError] = useState('');
+  const currentUser = JSON.parse(localStorage.getItem('session') || '{}')?.state?.user;
+
   // --- QUERY 1: REPORTE DE VENTAS ---
   const { data: salesData, isLoading: loadingSales, refetch: refetchSales } = useQuery<SalesSummary>({
     queryKey: ['salesSummary', startDate, endDate],
@@ -103,6 +109,38 @@ export default function Reports() {
     { name: 'Tarjeta', value: s.tarjeta, color: '#a855f7' },
     { name: 'SPEI / Transf.', value: s.transferencia, color: '#eab308' }
   ].filter(item => item.value > 0);
+
+  // Manejar el envío de la devolución
+  const handleReturnSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!returnSale) return;
+
+    const itemsToReturn = Object.entries(returnQtys)
+      .filter(([_, qty]) => qty > 0)
+      .map(([id, qty]) => ({ saleItemId: parseInt(id), cantidad: qty }));
+
+    if (itemsToReturn.length === 0) {
+      setReturnError('Selecciona al menos 1 artículo para devolver.');
+      return;
+    }
+
+    try {
+      const res = await fetch(`http://localhost:3001/api/sales/${returnSale.id}/return`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: currentUser?.id, itemsToReturn })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      alert(`Devolución procesada. Dinero a entregar: $${parseFloat(data.totalDevuelto).toFixed(2)}`);
+      setReturnSale(null);
+      setReturnQtys({});
+      refetchSales();
+    } catch (err: any) {
+      setReturnError(err.message || 'Error al procesar devolución');
+    }
+  };
 
   return (
     <div className="p-6 space-y-6 max-h-screen flex flex-col h-full overflow-y-auto">
@@ -223,6 +261,7 @@ export default function Reports() {
                           <th className="px-4 py-2.5">Atendió</th>
                           <th className="px-4 py-2.5">Método</th>
                           <th className="px-4 py-2.5 text-right">Total</th>
+                          <th className="px-4 py-2.5 text-center">Acciones</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y">
@@ -238,6 +277,18 @@ export default function Reports() {
                               <td className="px-4 py-2">{sale.user.username}</td>
                               <td className="px-4 py-2">{sale.formaPago}</td>
                               <td className="px-4 py-2 text-right font-bold">${parseFloat(sale.total).toFixed(2)}</td>
+                              <td className="px-4 py-2 text-center">
+                                <button
+                                  onClick={() => {
+                                    setReturnSale(sale);
+                                    setReturnQtys({});
+                                    setReturnError('');
+                                  }}
+                                  className="text-xs bg-red-500/10 text-red-600 px-2 py-1 rounded font-bold hover:bg-red-500/20"
+                                >
+                                  Devolver
+                                </button>
+                              </td>
                             </tr>
                           ))
                         )}
@@ -472,6 +523,65 @@ export default function Reports() {
               </table>
             </div>
           )}
+        </div>
+      )}
+      {/* MODAL DE DEVOLUCIONES PARCIALES */}
+      {returnSale && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-lg bg-card border rounded-2xl shadow-2xl p-6 relative">
+            <button 
+              onClick={() => setReturnSale(null)}
+              className="absolute right-4 top-4 text-muted-foreground hover:text-foreground"
+            >
+              ✕
+            </button>
+            <h2 className="text-xl font-bold mb-1 text-red-500 flex items-center gap-2">
+              <Archive size={20} /> Devolución de Artículos
+            </h2>
+            <p className="text-xs text-muted-foreground mb-4">Folio Venta: {returnSale.folio}</p>
+            
+            {returnError && <div className="p-2 mb-3 bg-red-500/10 text-red-500 text-xs rounded border border-red-500/20">{returnError}</div>}
+            
+            <form onSubmit={handleReturnSubmit} className="space-y-4">
+              <div className="max-h-60 overflow-y-auto divide-y border rounded-xl bg-muted/10 p-2">
+                {returnSale.items.map((item: any) => {
+                  const qtyAvailable = item.cantidad - (item.cantidadDevuelta || 0);
+                  const currentQty = returnQtys[item.id] || 0;
+                  
+                  if (qtyAvailable <= 0) return null;
+
+                  return (
+                    <div key={item.id} className="py-2 flex justify-between items-center text-sm">
+                      <div className="flex-1">
+                        <span className="font-semibold block">{item.nombre}</span>
+                        <span className="text-[10px] text-muted-foreground">Disponible para devolver: {qtyAvailable}</span>
+                      </div>
+                      <div className="flex items-center border rounded-lg overflow-hidden bg-background">
+                        <button 
+                          type="button"
+                          onClick={() => setReturnQtys(prev => ({ ...prev, [item.id]: Math.max(0, currentQty - 1) }))}
+                          className="px-3 py-1 hover:bg-accent text-xs font-bold"
+                        >-</button>
+                        <span className="px-3 text-xs font-bold font-mono">{currentQty}</span>
+                        <button 
+                          type="button"
+                          onClick={() => setReturnQtys(prev => ({ ...prev, [item.id]: Math.min(qtyAvailable, currentQty + 1) }))}
+                          className="px-3 py-1 hover:bg-accent text-xs font-bold"
+                        >+</button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <button
+                type="submit"
+                className="w-full py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-red-600/20"
+              >
+                Procesar Devolución
+              </button>
+            </form>
+          </div>
         </div>
       )}
 
