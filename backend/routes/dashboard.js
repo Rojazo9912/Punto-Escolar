@@ -96,6 +96,24 @@ router.get('/metrics', async (req, res) => {
       }
     });
 
+    // 5.1 Egresos Operativos del día (CashMovements con expenseCategoryId)
+    const dailyExpenses = await prisma.cashMovement.aggregate({
+      where: {
+        fecha: {
+          gte: today,
+          lte: endOfDay
+        },
+        tipo: 'EGRESO',
+        expenseCategoryId: { not: null }
+      },
+      _sum: {
+        monto: true
+      }
+    });
+
+    const egresosDiarios = parseFloat(dailyExpenses._sum.monto?.toString() || '0');
+    const utilidadNeta = gananciaDia - egresosDiarios;
+
     // 6. Actividad Reciente: Últimas 5 ventas
     const recentSales = await prisma.sale.findMany({
       take: 5,
@@ -130,6 +148,8 @@ router.get('/metrics', async (req, res) => {
         ventasDia: parseFloat(dailySales._sum.total?.toString() || '0'),
         ventasMes: parseFloat(monthlySales._sum.total?.toString() || '0'),
         gananciaDia: Math.max(0, gananciaDia),
+        egresosDiarios,
+        utilidadNeta,
         productosVendidos: dailyItems._sum.cantidad || 0,
         stockBajoAlertas: lowStockCount
       },

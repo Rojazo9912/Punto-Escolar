@@ -378,6 +378,17 @@ export default function Reports() {
                 </div>
               </div>
 
+              {/* Acciones del Inventario */}
+              <div className="flex justify-end">
+                <a
+                  href="http://localhost:3001/api/reports/inventory/pdf"
+                  download
+                  className="flex items-center gap-1.5 px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-amber-500/10"
+                >
+                  <FileText size={14} /> Descargar Sugerencia de Compra (PDF)
+                </a>
+              </div>
+
               {/* Listados de Alertas Críticas */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 

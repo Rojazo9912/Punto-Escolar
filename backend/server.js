@@ -20,6 +20,9 @@ const cashRoutes = require('./routes/cash');
 const backupRoutes = require('./routes/backup');
 const settingsRoutes = require('./routes/settings');
 const reportsRoutes = require('./routes/reports');
+const suppliersRoutes = require('./routes/suppliers');
+const purchasesRoutes = require('./routes/purchases');
+const expensesRoutes = require('./routes/expenses');
 
 // Registrar Rutas API
 app.use('/api/auth', authRoutes);
@@ -33,6 +36,9 @@ app.use('/api/cash', cashRoutes);
 app.use('/api/backups', backupRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/reports', reportsRoutes);
+app.use('/api/suppliers', suppliersRoutes);
+app.use('/api/purchases', purchasesRoutes);
+app.use('/api/expenses', expensesRoutes);
 
 // Ruta base de prueba de estado
 app.get('/api/status', (req, res) => {

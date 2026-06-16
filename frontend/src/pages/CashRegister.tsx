@@ -32,6 +32,7 @@ export default function CashRegister() {
   const [moveType, setMoveType] = useState<'INGRESO' | 'EGRESO'>('INGRESO');
   const [moveAmt, setMoveAmt] = useState('');
   const [moveDesc, setMoveDesc] = useState('');
+  const [moveExpenseCat, setMoveExpenseCat] = useState('');
   const [moveError, setMoveError] = useState('');
 
   const [showCloseModal, setShowCloseModal] = useState(false);
@@ -52,6 +53,15 @@ export default function CashRegister() {
       return res.json();
     },
     enabled: !!currentUser
+  });
+
+  // Consultar categorías de gastos
+  const { data: expenseCategories = [] } = useQuery<any[]>({
+    queryKey: ['expenseCategories'],
+    queryFn: async () => {
+      const res = await fetch('http://localhost:3001/api/expenses/categories');
+      return res.json();
+    }
   });
 
   // Mantener Zustand sincronizado con el servidor
@@ -158,6 +168,7 @@ export default function CashRegister() {
       refetchMovements();
       setMoveAmt('');
       setMoveDesc('');
+      setMoveExpenseCat('');
       setMoveError('');
     },
     onError: (err: any) => {
@@ -212,7 +223,12 @@ export default function CashRegister() {
       setMoveError('La descripción es obligatoria.');
       return;
     }
-    createMovementMutation.mutate({ tipo: moveType, monto: amt, descripcion: moveDesc });
+    createMovementMutation.mutate({ 
+      tipo: moveType, 
+      monto: amt, 
+      descripcion: moveDesc,
+      expenseCategoryId: moveType === 'EGRESO' && moveExpenseCat ? moveExpenseCat : null
+    });
   };
 
   const handleCloseSubmit = (e: React.FormEvent) => {
@@ -607,6 +623,22 @@ export default function CashRegister() {
                   required
                 />
               </div>
+
+              {moveType === 'EGRESO' && (
+                <div>
+                  <label className="block text-xs font-semibold mb-1 text-slate-500">Categoría del Gasto (Opcional)</label>
+                  <select
+                    className="w-full px-3 py-2 border rounded-lg bg-background text-sm"
+                    value={moveExpenseCat}
+                    onChange={(e) => setMoveExpenseCat(e.target.value)}
+                  >
+                    <option value="">-- Seleccionar Categoría (Opcional) --</option>
+                    {expenseCategories.map(cat => (
+                      <option key={cat.id} value={cat.id}>{cat.nombre}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <button
                 type="submit"

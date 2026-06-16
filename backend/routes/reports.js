@@ -158,6 +158,47 @@ router.get('/products-ranking', async (req, res) => {
 
 // --- EXPORTACIÓN DE REPORTES EN PDF Y EXCEL ---
 
+// Sugerencia Inteligente de Compras (PDF)
+router.get('/inventory/pdf', async (req, res) => {
+  try {
+    const products = await prisma.product.findMany({
+      where: { activo: true, stock: { lte: prisma.product.fields.stockMinimo } },
+      include: { category: true },
+      orderBy: { stock: 'asc' }
+    });
+
+    const doc = new PDFDocument({ margin: 50 });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename=Sugerencia_Resurtido.pdf');
+    doc.pipe(res);
+
+    doc.fontSize(20).text('Sugerencia de Resurtido de Inventario', { align: 'center' });
+    doc.fontSize(10).text(`Fecha de generación: ${new Date().toLocaleDateString()}`, { align: 'center' });
+    doc.moveDown(2);
+
+    doc.fontSize(10).text('Producto / SKU', 50, 150, { bold: true });
+    doc.text('Categoría', 250, 150, { bold: true });
+    doc.text('Mínimo', 380, 150, { bold: true });
+    doc.text('Stock', 460, 150, { bold: true });
+    doc.moveTo(50, 165).lineTo(550, 165).stroke();
+
+    let y = 175;
+    products.forEach(p => {
+      if (y > 700) { doc.addPage(); y = 50; }
+      doc.text(`${p.nombre} (${p.sku})`, 50, y, { width: 190 });
+      doc.text(p.category?.name || 'N/A', 250, y);
+      doc.text(p.stockMinimo.toString(), 380, y);
+      doc.fillColor(p.stock === 0 ? 'red' : 'orange').text(p.stock.toString(), 460, y);
+      doc.fillColor('black');
+      y += 20;
+    });
+
+    doc.end();
+  } catch (error) {
+    res.status(500).json({ error: 'Error al generar PDF' });
+  }
+});
+
 // 4. Exportar Reporte de Ventas en PDF
 router.get('/sales/pdf', async (req, res) => {
   const { startDate, endDate } = req.query;

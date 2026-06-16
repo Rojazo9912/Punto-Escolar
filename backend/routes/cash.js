@@ -60,10 +60,10 @@ router.post('/open', async (req, res) => {
 
 // 3. Registrar Movimiento (Ingreso / Egreso) de efectivo
 router.post('/movements', async (req, res) => {
-  const { registerId, userId, tipo, monto, descripcion } = req.body;
+  const { registerId, userId, tipo, monto, descripcion, expenseCategoryId } = req.body;
 
   if (!registerId || !userId || !tipo || !monto || !descripcion) {
-    return res.status(400).json({ error: 'Todos los campos son requeridos' });
+    return res.status(400).json({ error: 'Todos los campos obligatorios son requeridos' });
   }
 
   const amt = parseFloat(monto);
@@ -81,6 +81,7 @@ router.post('/movements', async (req, res) => {
         data: {
           registerId: parseInt(registerId),
           userId: parseInt(userId),
+          expenseCategoryId: expenseCategoryId ? parseInt(expenseCategoryId) : null,
           tipo,
           monto: amt,
           descripcion

@@ -19,6 +19,8 @@ interface MetricData {
     ventasDia: number;
     ventasMes: number;
     gananciaDia: number;
+    egresosDiarios: number;
+    utilidadNeta: number;
     productosVendidos: number;
     stockBajoAlertas: number;
   };
@@ -45,6 +47,8 @@ export default function Dashboard() {
     ventasDia: 0,
     ventasMes: 0,
     gananciaDia: 0,
+    egresosDiarios: 0,
+    utilidadNeta: 0,
     productosVendidos: 0,
     stockBajoAlertas: 0
   };
@@ -117,20 +121,22 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Ganancia del Día */}
+            {/* Ganancia y Utilidad */}
             {hasPermission('ver_utilidades') && (
               <div className="border bg-card rounded-2xl p-5 hover:shadow-lg hover:border-purple-500/30 active:scale-[0.99] transition-all flex flex-col justify-between">
                 <div className="flex justify-between items-start">
-                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Ganancia Estimada</span>
+                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Utilidad Neta</span>
                   <div className="p-2 bg-purple-500/10 rounded-xl text-purple-500">
                     <DollarSign size={20} />
                   </div>
                 </div>
                 <div className="mt-4">
                   <h3 className="text-2xl font-extrabold tracking-tight font-outfit text-purple-600 dark:text-purple-400">
-                    ${m.gananciaDia.toFixed(2)}
+                    ${m.utilidadNeta.toFixed(2)}
                   </h3>
-                  <span className="text-xs text-muted-foreground mt-1 block">Total ventas - costo compra</span>
+                  <span className="text-[10px] text-muted-foreground mt-1 block">
+                    Bruto: ${m.gananciaDia.toFixed(2)} | Gastos: ${m.egresosDiarios.toFixed(2)}
+                  </span>
                 </div>
               </div>
             )}

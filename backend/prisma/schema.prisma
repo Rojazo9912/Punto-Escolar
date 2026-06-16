@@ -20,6 +20,7 @@ model User {
   cashRegisters   CashRegister[]
   cashMovements   CashMovement[]
   auditLogs       AuditLog[]
+  purchaseOrders  PurchaseOrder[]
 
   @@map("users")
 }
@@ -71,6 +72,7 @@ model Product {
   inventoryMovements InventoryMovement[]
   saleItems          SaleItem[]
   schoolListItems    SchoolListItem[]
+  purchaseItems      PurchaseItem[]
 
   @@map("products")
 }
@@ -217,15 +219,17 @@ model CashRegister {
 }
 
 model CashMovement {
-  id          Int          @id @default(autoincrement())
-  registerId  Int          @map("register_id")
-  userId      Int          @map("user_id")
-  tipo        String       // INGRESO, EGRESO
-  monto       Decimal      
-  descripcion String
-  fecha       DateTime     @default(now())
-  register    CashRegister @relation(fields: [registerId], references: [id])
-  user        User         @relation(fields: [userId], references: [id])
+  id                Int              @id @default(autoincrement())
+  registerId        Int              @map("register_id")
+  userId            Int              @map("user_id")
+  expenseCategoryId Int?             @map("expense_category_id")
+  tipo              String           // INGRESO, EGRESO
+  monto             Decimal      
+  descripcion       String
+  fecha             DateTime         @default(now())
+  register          CashRegister     @relation(fields: [registerId], references: [id])
+  user              User             @relation(fields: [userId], references: [id])
+  expenseCategory   ExpenseCategory? @relation(fields: [expenseCategoryId], references: [id])
 
   @@map("cash_movements")
 }
@@ -264,3 +268,53 @@ model Backup {
 
   @@map("backups")
 }
+
+model ExpenseCategory {
+  id            Int            @id @default(autoincrement())
+  nombre        String         @unique
+  descripcion   String?
+  cashMovements CashMovement[]
+
+  @@map("expense_categories")
+}
+
+model Supplier {
+  id             Int             @id @default(autoincrement())
+  nombre         String
+  contacto       String?
+  telefono       String?
+  rfc            String?
+  activo         Boolean         @default(true)
+  purchaseOrders PurchaseOrder[]
+
+  @@map("suppliers")
+}
+
+model PurchaseOrder {
+  id         Int            @id @default(autoincrement())
+  folio      String         @unique
+  fecha      DateTime       @default(now())
+  supplierId Int            @map("supplier_id")
+  userId     Int            @map("user_id")
+  total      Decimal
+  estado     String         @default("COMPLETADA") // COMPLETADA, CANCELADA
+  supplier   Supplier       @relation(fields: [supplierId], references: [id])
+  user       User           @relation(fields: [userId], references: [id])
+  items      PurchaseItem[]
+
+  @@map("purchase_orders")
+}
+
+model PurchaseItem {
+  id              Int           @id @default(autoincrement())
+  purchaseOrderId Int           @map("purchase_order_id")
+  productId       Int           @map("product_id")
+  cantidad        Int
+  costoUnitario   Decimal       @map("costo_unitario")
+  subtotal        Decimal
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
+  product         Product       @relation(fields: [productId], references: [id])
+
+  @@map("purchase_items")
+}
+

@@ -17,7 +17,7 @@ Sirve como **Documento de Especificación (PRD)** para dar contexto a futuros de
 - **Frontend:**
   - Botón "Guardar como Cotización" en el POS.
   - Pantalla para listar y cargar cotizaciones para convertirlas en ventas reales.
-- **Estado:** `[ ] Pendiente`
+- **Estado:** `[x] Completado`
 
 ### 2. Devoluciones y Cambios Físicos
 - **Objetivo:** Manejar artículos regresados después de una venta completada.
@@ -28,7 +28,7 @@ Sirve como **Documento de Especificación (PRD)** para dar contexto a futuros de
   - Interfaz en el historial de tickets para seleccionar un artículo y marcarlo como devuelto.
   - Reintegrar el producto al `stock`.
   - Registrar un `CashMovement` de EGRESO si se devuelve efectivo.
-- **Estado:** `[ ] Pendiente`
+- **Estado:** `[x] Completado`
 
 ---
 

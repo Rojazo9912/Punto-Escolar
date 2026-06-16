@@ -14,6 +14,7 @@ import Services from './pages/Services';
 import CashRegister from './pages/CashRegister';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
+import Purchases from './pages/Purchases';
 
 // Iconos
 import { 
@@ -28,11 +29,12 @@ import {
   Settings as SettingsIcon,
   LogOut,
   Moon,
-  Sun
+  Sun,
+  Truck
 } from 'lucide-react';
 
 
-type PageType = 'dashboard' | 'pos' | 'inventory' | 'school-lists' | 'customers' | 'services' | 'cash' | 'reports' | 'settings';
+type PageType = 'dashboard' | 'pos' | 'inventory' | 'school-lists' | 'customers' | 'services' | 'cash' | 'reports' | 'purchases' | 'settings';
 
 export default function App() {
   const { isAuthenticated, user, logout } = useSessionStore();
@@ -55,6 +57,7 @@ export default function App() {
     { id: 'customers', name: 'Clientes', icon: Users, role: 'Cajero' },
     { id: 'cash', name: 'Caja Registradora', icon: Wallet, role: 'Cajero' },
     // Solo administrador
+    { id: 'purchases', name: 'Compras', icon: Truck, role: 'Administrador' },
     { id: 'reports', name: 'Reportes', icon: TrendingUp, role: 'Administrador' },
     { id: 'settings', name: 'Configuración', icon: SettingsIcon, role: 'Administrador' },
   ];
@@ -74,6 +77,7 @@ export default function App() {
       case 'customers': return <Customers />;
       case 'services': return <Services />;
       case 'cash': return <CashRegister />;
+      case 'purchases': return <Purchases />;
       case 'reports': return <Reports />;
       case 'settings': return <Settings />;
       default: return <Dashboard />;
