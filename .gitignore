@@ -1,1 +1,29 @@
-node_modules
+# Dependencias
+node_modules/
+
+# Build de Electron
+dist/
+out/
+release/
+
+# Base de datos local
+*.db
+*.sqlite
+*.sqlite3
+
+# Variables de entorno
+.env
+.env.local
+.env.production
+
+# Logs
+*.log
+logs/
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# Cache de Vite/TypeScript
+.vite/
+*.tsbuildinfo
