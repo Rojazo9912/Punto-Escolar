@@ -10,7 +10,7 @@ export default function Purchases() {
   const [activeTab, setActiveTab] = useState<'compras' | 'proveedores' | 'stockBajo'>('compras');
 
   // --- QUERIES ---
-  const { data: suppliers = [], isLoading: loadSuppliers } = useQuery<any[]>({
+  const { data: suppliers = [], isLoading: _loadSuppliers } = useQuery<any[]>({
     queryKey: ['suppliers'],
     queryFn: async () => {
       const res = await fetch('http://localhost:3001/api/suppliers');
@@ -18,7 +18,7 @@ export default function Purchases() {
     }
   });
 
-  const { data: purchases = [], isLoading: loadPurchases } = useQuery<any[]>({
+  const { data: purchases = [], isLoading: _loadPurchases } = useQuery<any[]>({
     queryKey: ['purchases'],
     queryFn: async () => {
       const res = await fetch('http://localhost:3001/api/purchases');

@@ -215,7 +215,7 @@ export default function Dashboard() {
                   <BarChart data={chartsData.salesByDay} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
                     <XAxis dataKey="dia" tick={{ fontSize: 11 }} />
                     <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}`} width={55} />
-                    <Tooltip formatter={(v: number) => [`$${v.toFixed(2)}`, 'Ventas']} />
+                    <Tooltip formatter={(v: any) => [`$${Number(v ?? 0).toFixed(2)}`, 'Ventas']} />
                     <Bar dataKey="ventas" fill="#3b82f6" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -248,7 +248,7 @@ export default function Dashboard() {
                           <Cell key={idx} fill={PIE_COLORS[idx % PIE_COLORS.length]} />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(v: number) => [`$${v.toFixed(2)}`, 'Total']} />
+                      <Tooltip formatter={(v: any) => [`$${Number(v ?? 0).toFixed(2)}`, 'Total']} />
                       <Legend />
                     </PieChart>
                   </ResponsiveContainer>
