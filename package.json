@@ -31,6 +31,8 @@
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
+    "electron-log": "^5.4.4",
+    "electron-updater": "^6.8.9",
     "exceljs": "^4.4.0",
     "express": "^4.19.2",
     "pdfkit": "^0.15.0"
@@ -38,6 +40,13 @@
   "build": {
     "appId": "com.puntoescolar.app",
     "productName": "Punto Escolar",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "Rojazo9912",
+        "repo": "Punto-Escolar"
+      }
+    ],
     "directories": {
       "output": "dist"
     },

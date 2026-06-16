@@ -1,5 +1,12 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
+const log = require('electron-log');
+const { autoUpdater } = require('electron-updater');
+
+// Configuración básica de logs para el actualizador
+log.transports.file.level = 'info';
+autoUpdater.logger = log;
+autoUpdater.autoDownload = true;
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 
 const fs = require('fs');
@@ -66,8 +73,34 @@ function createWindow() {
 app.whenReady().then(() => {
   createWindow();
 
+  // Buscar actualizaciones luego de crear la ventana principal (solo si está empaquetado)
+  if (app.isPackaged) {
+    autoUpdater.checkForUpdatesAndNotify().catch(err => {
+      log.error('Error al buscar actualizaciones:', err);
+    });
+  }
+
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  });
+});
+
+// Eventos del Auto-Updater
+autoUpdater.on('update-available', (info) => {
+  log.info('Actualización disponible:', info.version);
+});
+
+autoUpdater.on('update-downloaded', (info) => {
+  log.info('Actualización descargada:', info.version);
+  dialog.showMessageBox({
+    type: 'info',
+    title: 'Actualización lista',
+    message: 'Una nueva versión de Punto Escolar se ha descargado. Se instalará al cerrar la aplicación.',
+    buttons: ['Reiniciar y Actualizar ahora', 'Más tarde']
+  }).then((result) => {
+    if (result.response === 0) {
+      autoUpdater.quitAndInstall();
+    }
   });
 });
 
