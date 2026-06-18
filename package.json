@@ -8,7 +8,8 @@
     "start:electron": "wait-on http://localhost:5173 && electron .",
     "install:all": "npm install && npm install --prefix backend && npm install --prefix frontend",
     "build:frontend": "npm run build --prefix frontend",
-    "build:electron": "npm run build:frontend && electron-builder"
+    "build:electron": "npm run build:frontend && electron-builder",
+    "build:fast": "npm run build:frontend && electron-builder --win --dir"
   },
   "keywords": [
     "pos",
