@@ -28,6 +28,7 @@ interface Customer {
 export default function Customers() {
   const queryClient = useQueryClient();
   const currentUser = useSessionStore(state => state.user);
+  const token = useSessionStore(state => state.getToken());
 
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
@@ -44,7 +45,9 @@ export default function Customers() {
   const { data: customers = [], isLoading } = useQuery<Customer[]>({
     queryKey: ['customers'],
     queryFn: async () => {
-      const res = await fetch('http://localhost:3001/api/customers');
+      const res = await fetch('http://localhost:3001/api/customers', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       if (!res.ok) throw new Error('Error al obtener clientes');
       return res.json();
     }
@@ -59,7 +62,10 @@ export default function Customers() {
 
       const res = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({ ...payload, userId: currentUser?.id })
       });
       if (!res.ok) throw new Error('Error al guardar cliente');
@@ -78,7 +84,10 @@ export default function Customers() {
     mutationFn: async (id: number) => {
       const res = await fetch(`http://localhost:3001/api/customers/${id}`, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({ userId: currentUser?.id })
       });
       if (!res.ok) {

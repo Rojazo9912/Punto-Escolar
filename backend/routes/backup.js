@@ -3,6 +3,11 @@ const router = express.Router();
 const prisma = require('../prismaClient');
 const { crearRespaldoSilencioso, restaurarRespaldo, getBackupDirectory } = require('../utils/backupHelper');
 const { registrarAuditoria } = require('../utils/audit');
+const { verifySession, requireAdmin } = require('../utils/authMiddleware');
+
+// Proteger todas las rutas de respaldos
+router.use(verifySession);
+router.use(requireAdmin);
 
 // 1. Obtener directorio y lista de respaldos registrados
 router.get('/list', async (req, res) => {

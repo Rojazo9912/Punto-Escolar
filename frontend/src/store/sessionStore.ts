@@ -19,6 +19,7 @@ export interface User {
   roleId: number;
   active: boolean;
   role: Role;
+  token?: string;
 }
 
 interface SessionState {
@@ -27,6 +28,7 @@ interface SessionState {
   login: (user: User) => void;
   logout: () => void;
   hasPermission: (permissionName: string) => boolean;
+  getToken: () => string | null;
 }
 
 export const useSessionStore = create<SessionState>((set, get) => ({
@@ -49,5 +51,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     // Administrador siempre tiene todos los accesos
     if (user.role.name === 'Administrador') return true;
     return user.role.permissions.some(p => p.name === permissionName);
+  },
+  getToken: () => {
+    return get().user?.token || null;
   }
 }));

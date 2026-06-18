@@ -2,6 +2,11 @@ const express = require('express');
 const router = express.Router();
 const prisma = require('../prismaClient');
 const { registrarAuditoria } = require('../utils/audit');
+const { verifySession, requireAdmin } = require('../utils/authMiddleware');
+
+// Proteger todas las rutas de compras
+router.use(verifySession);
+router.use(requireAdmin);
 
 router.get('/', async (req, res) => {
   try {

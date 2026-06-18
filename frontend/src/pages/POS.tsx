@@ -50,7 +50,9 @@ interface Customer {
 export default function POS() {
   const queryClient = useQueryClient();
   const currentUser = useSessionStore(state => state.user);
+  const token = useSessionStore(state => state.getToken());
   const { activeRegister, isOpen: isCashOpen } = useCashStore();
+  const [scanToast, setScanToast] = useState<string | null>(null);
 
   // Zustand Cart Store
   const { 
@@ -94,7 +96,9 @@ export default function POS() {
   const { data: products = [] } = useQuery<Product[]>({
     queryKey: ['products-pos'],
     queryFn: async () => {
-      const res = await fetch('http://localhost:3001/api/products');
+      const res = await fetch('http://localhost:3001/api/products', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       if (!res.ok) throw new Error('Error al obtener productos');
       return res.json();
     }
@@ -104,7 +108,9 @@ export default function POS() {
   const { data: services = [] } = useQuery<Service[]>({
     queryKey: ['services-pos'],
     queryFn: async () => {
-      const res = await fetch('http://localhost:3001/api/services');
+      const res = await fetch('http://localhost:3001/api/services', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       if (!res.ok) throw new Error('Error al obtener servicios');
       return res.json();
     }
@@ -114,7 +120,9 @@ export default function POS() {
   const { data: customers = [] } = useQuery<Customer[]>({
     queryKey: ['customers-pos'],
     queryFn: async () => {
-      const res = await fetch('http://localhost:3001/api/customers');
+      const res = await fetch('http://localhost:3001/api/customers', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       if (!res.ok) throw new Error('Error al obtener clientes');
       return res.json();
     }
@@ -124,7 +132,9 @@ export default function POS() {
   const { data: businessSettings } = useQuery({
     queryKey: ['business-settings-pos'],
     queryFn: async () => {
-      const res = await fetch('http://localhost:3001/api/settings');
+      const res = await fetch('http://localhost:3001/api/settings', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       return res.json();
     }
   });
@@ -159,7 +169,9 @@ export default function POS() {
   // Cargar Cotizaciones
   const loadSuspendedSales = async () => {
     try {
-      const res = await fetch('http://localhost:3001/api/sales/quotations');
+      const res = await fetch('http://localhost:3001/api/sales/quotations', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       const data = await res.json();
       setSuspendedSalesList(data);
     } catch (err) {
@@ -213,7 +225,10 @@ export default function POS() {
         stock: matched.stock,
         unidad: 'pza'
       });
-      if (!added) {
+      if (added) {
+        setScanToast(`¡Escaneado! ${matched.nombre}`);
+        setTimeout(() => setScanToast(null), 2000);
+      } else {
         alert('Stock insuficiente para este producto.');
       }
       setSearchQuery('');
@@ -264,7 +279,10 @@ export default function POS() {
     try {
       const res = await fetch('http://localhost:3001/api/sales', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({
           items: cartItems,
           isQuotation: true,
@@ -289,7 +307,8 @@ export default function POS() {
   const handleRecoverSale = async (id: number) => {
     try {
       const res = await fetch(`http://localhost:3001/api/sales/quotations/${id}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
         // Encontrar la cotización en la lista local para cargar sus items
@@ -352,7 +371,10 @@ export default function POS() {
     try {
       const response = await fetch('http://localhost:3001/api/sales', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify(payload)
       });
 
@@ -685,14 +707,14 @@ export default function POS() {
             <button
               onClick={handleSuspendSale}
               disabled={cartItems.length === 0}
-              className="py-2.5 border rounded-xl hover:bg-accent text-xs font-bold transition-all disabled:opacity-50 text-blue-600 border-blue-600/30 bg-blue-600/5 hover:bg-blue-600/10"
+              className="py-2.5 border rounded-xl hover:bg-accent text-xs font-bold transition-all active:scale-[0.97] active:duration-75 disabled:opacity-50 text-blue-600 border-blue-600/30 bg-blue-600/5 hover:bg-blue-600/10"
             >
               F3: Cotización
             </button>
             <button
               onClick={handleOpenCheckout}
               disabled={cartItems.length === 0}
-              className="py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-blue-600/15 flex items-center justify-center gap-1.5 transition-all disabled:opacity-50"
+              className="py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-blue-600/15 flex items-center justify-center gap-1.5 transition-all active:scale-[0.97] active:duration-75 disabled:opacity-50"
             >
               <Check size={14} /> F2: Cobrar Caja
             </button>
@@ -924,6 +946,13 @@ export default function POS() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {scanToast && (
+        <div className="fixed bottom-4 left-4 bg-blue-600 text-white px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-2 animate-bounce z-50 text-xs font-bold font-outfit">
+          <Sparkles size={14} className="animate-spin" />
+          {scanToast}
         </div>
       )}
 

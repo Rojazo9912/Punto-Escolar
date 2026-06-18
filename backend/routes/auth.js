@@ -38,9 +38,13 @@ router.post('/login', async (req, res) => {
     // Registrar inicio de sesión exitoso
     await registrarAuditoria(user.id, 'Inicio de sesión exitoso', 'AUTENTICACIÓN', req);
 
-    // Retornar información del usuario sin el password
+    // Generar token firmado nativamente
+    const { generateToken } = require('../utils/authMiddleware');
+    const token = generateToken(user);
+
+    // Retornar información del usuario sin el password, incluyendo el token
     const { password: _, ...userWithoutPassword } = user;
-    return res.json(userWithoutPassword);
+    return res.json({ ...userWithoutPassword, token });
   } catch (error) {
     console.error('Error en /login:', error);
     return res.status(500).json({ error: 'Error interno del servidor' });

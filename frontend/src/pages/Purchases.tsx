@@ -6,6 +6,7 @@ import { PackageOpen, Truck, Plus, Save, X, Search, AlertTriangle, FileDown } fr
 export default function Purchases() {
   const queryClient = useQueryClient();
   const currentUser = useSessionStore(state => state.user);
+  const token = useSessionStore(state => state.getToken());
   
   const [activeTab, setActiveTab] = useState<'compras' | 'proveedores' | 'stockBajo'>('compras');
 
@@ -13,7 +14,9 @@ export default function Purchases() {
   const { data: suppliers = [], isLoading: _loadSuppliers } = useQuery<any[]>({
     queryKey: ['suppliers'],
     queryFn: async () => {
-      const res = await fetch('http://localhost:3001/api/suppliers');
+      const res = await fetch('http://localhost:3001/api/suppliers', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       return res.json();
     }
   });
@@ -21,7 +24,9 @@ export default function Purchases() {
   const { data: purchases = [], isLoading: _loadPurchases } = useQuery<any[]>({
     queryKey: ['purchases'],
     queryFn: async () => {
-      const res = await fetch('http://localhost:3001/api/purchases');
+      const res = await fetch('http://localhost:3001/api/purchases', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       return res.json();
     }
   });
@@ -29,7 +34,9 @@ export default function Purchases() {
   const { data: products = [] } = useQuery<any[]>({
     queryKey: ['productsForPurchase'],
     queryFn: async () => {
-      const res = await fetch('http://localhost:3001/api/products');
+      const res = await fetch('http://localhost:3001/api/products', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       return res.json();
     }
   });
@@ -37,13 +44,15 @@ export default function Purchases() {
   const { data: lowStockProducts = [] } = useQuery<any[]>({
     queryKey: ['lowStockProducts'],
     queryFn: async () => {
-      const res = await fetch('http://localhost:3001/api/products/low-stock');
+      const res = await fetch('http://localhost:3001/api/products/low-stock', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       return res.json();
     }
   });
 
   const handleDownloadLowStockPdf = () => {
-    window.open('http://localhost:3001/api/reports/inventory/pdf', '_blank');
+    window.open(`http://localhost:3001/api/reports/inventory/pdf?token=${token}`, '_blank');
   };
 
   // --- ESTADOS PROVEEDOR ---
@@ -54,7 +63,10 @@ export default function Purchases() {
     mutationFn: async (data: any) => {
       const res = await fetch('http://localhost:3001/api/suppliers', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify(data)
       });
       if (!res.ok) throw new Error('Error al crear proveedor');
@@ -82,7 +94,10 @@ export default function Purchases() {
     mutationFn: async (data: any) => {
       const res = await fetch('http://localhost:3001/api/purchases', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify(data)
       });
       if (!res.ok) throw new Error('Error al registrar compra');

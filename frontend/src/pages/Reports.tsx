@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useSessionStore } from '../store/sessionStore';
 import { 
   BarChart, 
   Bar, 
@@ -64,13 +65,16 @@ export default function Reports() {
   const [returnSale, setReturnSale] = useState<any>(null);
   const [returnQtys, setReturnQtys] = useState<{ [id: number]: number }>({});
   const [returnError, setReturnError] = useState('');
-  const currentUser = JSON.parse(localStorage.getItem('session') || '{}')?.state?.user;
+  const currentUser = useSessionStore(state => state.user);
+  const token = useSessionStore(state => state.getToken());
 
   // --- QUERY 1: REPORTE DE VENTAS ---
   const { data: salesData, isLoading: loadingSales, refetch: refetchSales } = useQuery<SalesSummary>({
     queryKey: ['salesSummary', startDate, endDate],
     queryFn: async () => {
-      const res = await fetch(`http://localhost:3001/api/reports/sales-summary?filterType=range&startDate=${startDate}&endDate=${endDate}`);
+      const res = await fetch(`http://localhost:3001/api/reports/sales-summary?filterType=range&startDate=${startDate}&endDate=${endDate}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       return res.json();
     }
   });
@@ -79,7 +83,9 @@ export default function Reports() {
   const { data: invData, isLoading: loadingInv } = useQuery<InventorySummary>({
     queryKey: ['inventorySummary'],
     queryFn: async () => {
-      const res = await fetch('http://localhost:3001/api/reports/inventory-summary');
+      const res = await fetch('http://localhost:3001/api/reports/inventory-summary', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       return res.json();
     }
   });
@@ -88,7 +94,9 @@ export default function Reports() {
   const { data: rankData, isLoading: loadingRank } = useQuery<ProductRanking>({
     queryKey: ['productsRanking'],
     queryFn: async () => {
-      const res = await fetch('http://localhost:3001/api/reports/products-ranking');
+      const res = await fetch('http://localhost:3001/api/reports/products-ranking', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       return res.json();
     }
   });
@@ -97,7 +105,9 @@ export default function Reports() {
   const { data: cashHistory = [], isLoading: loadingCash } = useQuery<any[]>({
     queryKey: ['cashHistoryReports'],
     queryFn: async () => {
-      const res = await fetch('http://localhost:3001/api/cash/history/all');
+      const res = await fetch('http://localhost:3001/api/cash/history/all', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       return res.json();
     }
   });
@@ -127,7 +137,10 @@ export default function Reports() {
     try {
       const res = await fetch(`http://localhost:3001/api/sales/${returnSale.id}/return`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({ userId: currentUser?.id, itemsToReturn })
       });
       const data = await res.json();
@@ -209,7 +222,7 @@ export default function Reports() {
             <div className="flex gap-3">
               {/* Descargar PDF */}
               <a
-                href={`http://localhost:3001/api/reports/sales/pdf?startDate=${startDate}&endDate=${endDate}`}
+                href={`http://localhost:3001/api/reports/sales/pdf?startDate=${startDate}&endDate=${endDate}&token=${token}`}
                 download
                 className="flex items-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-red-500/10"
               >
@@ -217,7 +230,7 @@ export default function Reports() {
               </a>
               {/* Descargar Excel */}
               <a
-                href={`http://localhost:3001/api/reports/sales/excel?startDate=${startDate}&endDate=${endDate}`}
+                href={`http://localhost:3001/api/reports/sales/excel?startDate=${startDate}&endDate=${endDate}&token=${token}`}
                 download
                 className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-emerald-500/10"
               >
@@ -381,7 +394,7 @@ export default function Reports() {
               {/* Acciones del Inventario */}
               <div className="flex justify-end">
                 <a
-                  href="http://localhost:3001/api/reports/inventory/pdf"
+                  href={`http://localhost:3001/api/reports/inventory/pdf?token=${token}`}
                   download
                   className="flex items-center gap-1.5 px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-amber-500/10"
                 >

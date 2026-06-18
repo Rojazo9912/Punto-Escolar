@@ -121,7 +121,7 @@ ipcMain.handle('select-sql-file', async () => {
     title: 'Seleccionar archivo de Respaldo SQL',
     defaultPath: path.join(app.getPath('documents'), 'PuntoEscolar', 'Backups'),
     filters: [
-      { name: 'Respaldos MySQL (*.sql)', extensions: ['sql'] }
+      { name: 'Respaldos SQL (*.sql)', extensions: ['sql'] }
     ],
     properties: ['openFile']
   });

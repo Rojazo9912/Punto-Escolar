@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 const prisma = require('../prismaClient');
 const { registrarAuditoria } = require('../utils/audit');
+const { verifySession, requireAdmin } = require('../utils/authMiddleware');
+
+router.use(verifySession);
 
 // 1. Obtener listado de ventas general
 router.get('/', async (req, res) => {
@@ -212,7 +215,7 @@ router.delete('/quotations/:id', async (req, res) => {
 });
 
 // 3. Cancelar una Venta Completa
-router.post('/:id/cancel', async (req, res) => {
+router.post('/:id/cancel', requireAdmin, async (req, res) => {
   const { id } = req.params;
   const { userId } = req.body;
   if (!userId) return res.status(400).json({ error: 'ID de usuario obligatorio' });
@@ -271,7 +274,7 @@ router.post('/:id/cancel', async (req, res) => {
 });
 
 // 4. Devolución Parcial
-router.post('/:id/return', async (req, res) => {
+router.post('/:id/return', requireAdmin, async (req, res) => {
   const { id } = req.params;
   const { userId, itemsToReturn } = req.body; 
   // itemsToReturn: [{ saleItemId, cantidad }]

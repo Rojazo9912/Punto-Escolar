@@ -27,7 +27,7 @@ async function crearRespaldoSilencioso() {
   try {
     let sqlDump = `-- Punto Escolar SQL Backup\n`;
     sqlDump += `-- Generado: ${new Date().toISOString()}\n`;
-    sqlDump += `SET FOREIGN_KEY_CHECKS = 0;\n\n`;
+    sqlDump += `PRAGMA foreign_keys = OFF;\n\n`;
 
     // Lista de todas las tablas en orden de restauración recomendado
     const tables = [
@@ -46,17 +46,23 @@ async function crearRespaldoSilencioso() {
       'grades',
       'school_lists',
       'school_list_items',
+      'expense_categories',
       'cash_registers',
       'cash_movements',
       'audit_logs',
       'settings',
-      'backups'
+      'backups',
+      'suppliers',
+      'purchase_orders',
+      'purchase_items'
     ];
 
     for (const table of tables) {
       // 1. Limpiar tabla antes de insertar al restaurar
       sqlDump += `\n-- Estructura y datos de tabla: ${table}\n`;
-      sqlDump += `TRUNCATE TABLE \`${table}\`;\n`;
+      sqlDump += `DELETE FROM \`${table}\`;\n`;
+      // Opcional: Reiniciar la secuencia para SQLite si corresponde
+      sqlDump += `DELETE FROM sqlite_sequence WHERE name = '${table}';\n`;
 
       // 2. Consultar todos los registros de la tabla
       const rows = await prisma.$queryRawUnsafe(`SELECT * FROM \`${table}\``);
@@ -91,7 +97,7 @@ async function crearRespaldoSilencioso() {
       }
     }
 
-    sqlDump += `\nSET FOREIGN_KEY_CHECKS = 1;\n`;
+    sqlDump += `\nPRAGMA foreign_keys = ON;\n`;
 
     // Escribir archivo en disco
     fs.writeFileSync(fullPath, sqlDump, 'utf8');
@@ -155,14 +161,14 @@ async function restaurarRespaldo(filePath) {
 
     // Ejecutar todas las sentencias en transacción secuencial
     await prisma.$transaction(async (tx) => {
-      // Forzar desactivación de FK checks al inicio de la transacción
-      await tx.$executeRawUnsafe('SET FOREIGN_KEY_CHECKS = 0');
+      // Forzar desactivación de FK checks al inicio de la transacción para SQLite
+      await tx.$executeRawUnsafe('PRAGMA foreign_keys = OFF');
       
       for (const query of queries) {
         await tx.$executeRawUnsafe(query);
       }
       
-      await tx.$executeRawUnsafe('SET FOREIGN_KEY_CHECKS = 1');
+      await tx.$executeRawUnsafe('PRAGMA foreign_keys = ON');
     });
 
     return { success: true };

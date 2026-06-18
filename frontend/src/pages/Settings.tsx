@@ -24,6 +24,7 @@ interface AuditLog {
 export default function Settings() {
   const queryClient = useQueryClient();
   const currentUser = useSessionStore(state => state.user);
+  const token = useSessionStore(state => state.getToken());
   
   // Bitácora search
   const [logSearch, setLogSearch] = useState('');
@@ -42,7 +43,9 @@ export default function Settings() {
   const { data: users = [], isLoading: loadingUsers } = useQuery<any[]>({
     queryKey: ['usersList'],
     queryFn: async () => {
-      const res = await fetch('http://localhost:3001/api/auth/users');
+      const res = await fetch('http://localhost:3001/api/auth/users', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       return res.json();
     }
   });
@@ -58,7 +61,10 @@ export default function Settings() {
       
       const res = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify(payload)
       });
       
@@ -95,7 +101,9 @@ export default function Settings() {
   const { data: roles = [], isLoading: loadingRoles } = useQuery<any[]>({
     queryKey: ['rolesList'],
     queryFn: async () => {
-      const res = await fetch('http://localhost:3001/api/auth/roles');
+      const res = await fetch('http://localhost:3001/api/auth/roles', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       return res.json();
     }
   });
@@ -104,7 +112,9 @@ export default function Settings() {
   const { data: permissions = [] } = useQuery<any[]>({
     queryKey: ['permissionsList'],
     queryFn: async () => {
-      const res = await fetch('http://localhost:3001/api/auth/permissions');
+      const res = await fetch('http://localhost:3001/api/auth/permissions', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       return res.json();
     }
   });
@@ -120,7 +130,10 @@ export default function Settings() {
       
       const res = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify(payload)
       });
       
@@ -156,7 +169,9 @@ export default function Settings() {
   const { isLoading } = useQuery({
     queryKey: ['businessSettings'],
     queryFn: async () => {
-      const res = await fetch('http://localhost:3001/api/settings');
+      const res = await fetch('http://localhost:3001/api/settings', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       const data = await res.json();
       setForm({
         nombreNegocio: data.nombreNegocio || '',
@@ -174,7 +189,9 @@ export default function Settings() {
   const { data: auditLogs = [], isLoading: loadingLogs } = useQuery<AuditLog[]>({
     queryKey: ['auditLogs'],
     queryFn: async () => {
-      const res = await fetch('http://localhost:3001/api/settings/audit-logs');
+      const res = await fetch('http://localhost:3001/api/settings/audit-logs', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       return res.json();
     },
     enabled: currentUser?.role.name === 'Administrador'
@@ -185,7 +202,10 @@ export default function Settings() {
     mutationFn: async (payload: any) => {
       const res = await fetch('http://localhost:3001/api/settings', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({ ...payload, userId: currentUser?.id })
       });
       return res.json();
@@ -201,7 +221,10 @@ export default function Settings() {
     mutationFn: async (filePath: string) => {
       const res = await fetch('http://localhost:3001/api/backups/restore', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({ filePath, userId: currentUser?.id })
       });
       if (!res.ok) {
@@ -353,7 +376,7 @@ export default function Settings() {
             </h2>
             
             <p className="text-xs text-muted-foreground leading-relaxed">
-              El sistema realiza respaldos automáticos de MySQL en cada corte de caja. Si deseas restaurar información anterior o migrar el sistema, puedes seleccionar un respaldo SQL local.
+              El sistema realiza respaldos automáticos de SQLite en cada corte de caja. Si deseas restaurar información anterior o migrar el sistema, puedes seleccionar un respaldo SQL local.
             </p>
 
             <button

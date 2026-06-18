@@ -3,6 +3,11 @@ const router = express.Router();
 const prisma = require('../prismaClient');
 const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
+const { verifySession, requireAdmin } = require('../utils/authMiddleware');
+
+// Proteger todas las rutas de reportes
+router.use(verifySession);
+router.use(requireAdmin);
 
 // Helper para parsear fecha en formato YYYY-MM-DD a medianoche/fin de día en hora local
 function parseLocalDate(dateStr, endOfDay = false) {

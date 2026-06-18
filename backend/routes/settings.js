@@ -2,9 +2,10 @@ const express = require('express');
 const router = express.Router();
 const prisma = require('../prismaClient');
 const { registrarAuditoria } = require('../utils/audit');
+const { verifySession, requireAdmin } = require('../utils/authMiddleware');
 
 // 1. Obtener configuraciones del negocio
-router.get('/', async (req, res) => {
+router.get('/', verifySession, async (req, res) => {
   try {
     let settings = await prisma.setting.findUnique({ where: { id: 1 } });
     if (!settings) {
@@ -28,7 +29,7 @@ router.get('/', async (req, res) => {
 });
 
 // 2. Actualizar configuraciones del negocio
-router.put('/', async (req, res) => {
+router.put('/', verifySession, requireAdmin, async (req, res) => {
   const {
     nombreNegocio, direccion, telefono, correo,
     rfc, logoPath, mensajeTicket, userId
@@ -57,7 +58,7 @@ router.put('/', async (req, res) => {
 });
 
 // 3. Obtener bitácora de auditoría (para el rol administrador en configuración)
-router.get('/audit-logs', async (req, res) => {
+router.get('/audit-logs', verifySession, requireAdmin, async (req, res) => {
   try {
     const logs = await prisma.auditLog.findMany({
       include: {

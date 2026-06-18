@@ -76,12 +76,12 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-900 bg-cover bg-center relative" style={{ backgroundImage: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)' }}>
+    <div className="min-h-screen flex items-center justify-center bg-slate-900 bg-cover bg-center relative overflow-hidden" style={{ backgroundImage: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)' }}>
       {/* Círculos decorativos flotantes */}
-      <div className="absolute top-10 left-10 w-72 h-72 bg-blue-600/10 rounded-full blur-3xl"></div>
-      <div className="absolute bottom-10 right-10 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl"></div>
+      <div className="absolute top-10 left-10 w-72 h-72 bg-blue-600 rounded-full blur-3xl animate-float"></div>
+      <div className="absolute bottom-10 right-10 w-96 h-96 bg-purple-600 rounded-full blur-3xl animate-pulse-slow"></div>
 
-      <div className="w-full max-w-md p-8 rounded-2xl border border-white/10 bg-slate-900/60 backdrop-blur-xl shadow-2xl relative">
+      <div className="w-full max-w-md p-8 rounded-2xl border border-white/10 bg-slate-900/60 backdrop-blur-xl shadow-2xl relative animate-fade-in-up">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center p-1 bg-white rounded-2xl mb-3 border border-white/10 w-20 h-20 overflow-hidden shadow-md">
             <img src="./logo.png" alt="Punto Escolar Logo" className="w-full h-full object-contain rounded-xl" />
